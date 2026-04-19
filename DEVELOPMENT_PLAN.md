@@ -77,7 +77,7 @@
 - [ ] 8.2 - Caddy reverse proxy
 - [ ] 8.3 - Production environment configuration
 - [ ] 8.4 - Backup automation (performed by user)
-- [ ] 8.5 - Prepare & upload to git
+- [x] 8.5 - Prepare & upload to git
 
 ### Phase 9: Post-release improvements ✅ / ❌
 - [ ] 9.1 - Soft-delete + restore for accounts, categories, and payment methods (align with transactions; optional “Show deleted” on Treasury lists)
@@ -1879,7 +1879,12 @@ At this point Caddy should already be serving the domain. This task is a final v
 ssh basil@sir-spendalot.tmn.name
 sudo caddy adapt --config /etc/caddy/Caddyfile --pretty 2>/dev/null | rg "sir-spendalot"
 curl https://sir-spendalot.tmn.name/api/health
+curl -I https://sir-spendalot.tmn.name/api/docs
+curl -I https://sir-spendalot.tmn.name/api/redoc
 ```
+
+**Docs routing validation note:**
+- API docs must be reachable at `/api/docs` and `/api/redoc` (200 OK).
 
 **Mark complete:** `[x] 8.2 - Caddy reverse proxy`
 
@@ -1913,6 +1918,20 @@ sudo systemctl restart spendalot-api
 ```
 
 **Mark complete:** `[x] 8.4 - Backup automation`
+
+---
+
+### Task 8.5: Prepare & upload to git
+
+**What:** Ensure project files are versioned safely in a public repository and pushed from local machine.
+
+**Checklist:**
+- Initialize standalone git repo in project root.
+- Add `.gitignore` before first full stage.
+- Confirm secrets/local files are not staged (`backend/.env`, `.cursor/`, `.history/`, `.vscode/`, backups).
+- Commit with concise message and push to remote.
+
+**Mark complete:** `[x] 8.5 - Prepare & upload to git`
 
 ---
 
