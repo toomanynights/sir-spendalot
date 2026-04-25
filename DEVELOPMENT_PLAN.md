@@ -94,7 +94,7 @@
 
 ### Phase 11: Mobile layout (note: for every page, analyze if it's possible/worthwhile to transition the page into responsive design, or alternatives preferrable - hide the whole page/parts of content/suggest using desktop/customized mobile view... Some pages/elements already adapted to mobile - "no change needed" is also a valid answer) ✅ / ❌
 - [ ] 11.1 - General components (sidear, topbar, general page content)
-- [ ] 11.2 - Dashboard page, floating assistant (make sure the order of cards is the same on mobile as left-to-right on desktop)
+- [ ] 11.2 - Dashboard page  (make sure the order of cards is the same on mobile as left-to-right on desktop), floating assistant (make sure a tap on activated assistant deactivates it)
 - [ ] 11.3 - Quick Entry page
 - [ ] 11.4 - Chronicles page
 - [ ] 11.5 - Prophecies page
