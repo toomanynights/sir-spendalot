@@ -2,7 +2,6 @@ import { AlertCircle, Sun } from 'lucide-react'
 import { useTodayStats } from '../../hooks/useStats'
 import { useSelectedAccount } from '../../contexts/AccountContext'
 import { Card, CardHeader, CardBody } from '../ui/Card'
-import { Badge } from '../ui/Badge'
 import { LoadingScreen } from '../ui/Spinner'
 import { formatAmount, formatSigned } from '../../utils/format'
 
@@ -50,11 +49,7 @@ export default function TodayFortune() {
 
   return (
     <Card shimmer>
-      <CardHeader icon={<Sun size={20} />} title="This Day's Fortune">
-        {stats.today_excluded && (
-          <Badge variant="muted" className="ml-auto shrink-0">Excluded Day</Badge>
-        )}
-      </CardHeader>
+      <CardHeader icon={<Sun size={20} />} title="This Day's Fortune" />
 
       <CardBody>
         {/* Actual balance — hero number */}
@@ -80,6 +75,11 @@ export default function TodayFortune() {
             <p className="text-sm font-bold text-danger">−{formatAmount(totalOutgoings)}</p>
           )}
         </div>
+        {stats.today_excluded && (
+          <p className="text-xs text-amber-400 font-crimson italic mt-[-0.35rem] mb-2">
+            Excluded day
+          </p>
+        )}
         <div className={isPrimary ? "grid grid-cols-3 gap-3" : "grid grid-cols-2 gap-3"}>
           {isPrimary && (
             <SpendingCell label="Daily" value={daily} rollingAvg={rollingAvg} highMult={highMult} lowMult={lowMult} />

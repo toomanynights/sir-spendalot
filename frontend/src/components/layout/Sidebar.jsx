@@ -1,5 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
+  ChevronLeft,
+  ChevronRight,
   Coins,
   LayoutDashboard,
   Zap,
@@ -37,7 +39,7 @@ const NAV_ITEMS = [
   },
 ]
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen, onClose, collapsed = false, onToggleCollapse }) {
   const { logout } = useAuth()
 
   return (
@@ -48,22 +50,31 @@ export default function Sidebar({ isOpen, onClose }) {
       )}
 
       <aside
-        className={`sidebar ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+        className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''} ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       >
         {/* Logo */}
         <div className="sidebar-logo">
           <Coins size={28} className="text-gold shrink-0" strokeWidth={2} />
-          <div>
+          <div className={collapsed ? 'hidden' : ''}>
             <div className="sidebar-logo-title">Sir Spendalot</div>
             <div className="sidebar-logo-sub">Thy finances, foretold!</div>
           </div>
+          <button
+            type="button"
+            className="btn-ghost hidden md:inline-flex ml-auto text-gold-muted hover:text-gold"
+            onClick={onToggleCollapse}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
         </div>
 
         {/* Nav */}
         <nav className="sidebar-nav">
           {NAV_ITEMS.map(({ section, links }) => (
             <div key={section}>
-              <div className="nav-section-label">{section}</div>
+              {!collapsed && <div className="nav-section-label">{section}</div>}
               {links.map(({ to, label, icon: Icon }) => (
                 <NavLink
                   key={to}
@@ -73,9 +84,10 @@ export default function Sidebar({ isOpen, onClose }) {
                     `nav-item ${isActive ? 'nav-item-active' : ''}`
                   }
                   onClick={onClose}
+                  title={collapsed ? label : undefined}
                 >
                   <Icon size={18} strokeWidth={1.75} />
-                  {label}
+                  {!collapsed && label}
                 </NavLink>
               ))}
             </div>
@@ -87,13 +99,16 @@ export default function Sidebar({ isOpen, onClose }) {
           <button
             className="nav-item w-full text-danger/70 hover:text-danger"
             onClick={logout}
+            title={collapsed ? 'Log Out' : undefined}
           >
             <LogOut size={18} strokeWidth={1.75} />
-            Log Out
+            {!collapsed && 'Log Out'}
           </button>
-          <p className="text-gold-muted/30 text-xs font-crimson italic text-center mt-3">
-            "He who guards his gold,<br />guards his glory"
-          </p>
+          {!collapsed && (
+            <p className="text-gold-muted/30 text-xs font-crimson italic text-center mt-3">
+              "He who guards his gold,<br />guards his glory"
+            </p>
+          )}
         </div>
       </aside>
     </>

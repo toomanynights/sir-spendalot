@@ -18,8 +18,8 @@ const TYPE_LABELS = {
 
 const TYPE_BADGE_VARIANT = {
   daily:      'muted',
-  unplanned:  'primary',
-  predicted:  'muted',
+  unplanned:  'danger',
+  predicted:  'primary',
   transfer:   'muted',
   correction: 'muted',
 }

@@ -66,7 +66,7 @@
 ### Phase 7: Additional Features ✅ / ❌
 - [x] 7.2 - Enforce auth (swap optional_auth → require_auth on all routes; verify login page redirects correctly)
 - [ ] 7.3 - Data migration tool (from Google Sheets)
-- [ ] 7.4 - UI improvements (see specs)
+- [x] 7.4 - UI improvements (see specs)
 - [ ] 7.5 - Default payment method — add to Treasury; make selected by default when submitting via dashboard block / Quick entry (per account)
 - [ ] 7.7 - Chronicles improvement
 - [ ] 7.8 - Explicit income/expense control
@@ -1843,7 +1843,7 @@ GET /api/stats/insights?date_from=&date_to=&account_id=
 - Dashboard: Block positioning consistent between primary and secondary accounts
 - Dashboard, Recent Chronicles: review pill coloring (Unplanned/Daily/etc)
 
-**Mark complete:** `[ ] 7.4 - UI improvements`
+**Mark complete:** `[x] 7.4 - UI improvements`
 
 ---
 

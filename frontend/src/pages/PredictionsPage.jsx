@@ -201,6 +201,11 @@ export default function PredictionsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [saveError, setSaveError] = useState('')
+  const [filtersExpanded, setFiltersExpanded] = useState(false)
+  const [titleFilter, setTitleFilter] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [frequencyFilter, setFrequencyFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   const instancesByTemplate = useMemo(() => {
     const grouped = new Map()
@@ -214,6 +219,18 @@ export default function PredictionsPage() {
     }
     return grouped
   }, [pendingInstances])
+
+  const filteredTemplates = useMemo(() => {
+    return (templates || []).filter((template) => {
+      const matchesTitle = !titleFilter
+        || template.name.toLowerCase().includes(titleFilter.trim().toLowerCase())
+      const matchesType = !typeFilter || template.type === typeFilter
+      const matchesFrequency = !frequencyFilter || template.frequency === frequencyFilter
+      const matchesStatus = !statusFilter
+        || (statusFilter === 'active' ? !template.paused : template.paused)
+      return matchesTitle && matchesType && matchesFrequency && matchesStatus
+    })
+  }, [templates, titleFilter, typeFilter, frequencyFilter, statusFilter])
 
   function toggleExpanded(templateId) {
     setExpandedTemplateIds((prev) => {
@@ -294,6 +311,76 @@ export default function PredictionsPage() {
       <div className="page-container">
         <div className="flex flex-col gap-8 max-w-3xl w-full">
           <Card shimmer>
+            <CardHeader>
+              <button
+                type="button"
+                onClick={() => setFiltersExpanded((v) => !v)}
+                className="flex flex-1 min-w-0 items-center justify-between gap-2 text-left min-h-touch py-1 rounded-md hover:bg-black/10"
+              >
+                <span className="card-title">Filters</span>
+                {filtersExpanded ? <ChevronUp size={18} className="text-gold" /> : <ChevronDown size={18} className="text-gold" />}
+              </button>
+            </CardHeader>
+            {filtersExpanded && (
+              <CardBody>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="md:col-span-2">
+                    <span className="input-label">Title contains</span>
+                    <input
+                      className="input"
+                      value={titleFilter}
+                      onChange={(e) => setTitleFilter(e.target.value)}
+                      placeholder="Rent, salary, internet..."
+                    />
+                  </label>
+                  <label>
+                    <span className="input-label">Type</span>
+                    <select className="input" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                      <option value="">All</option>
+                      <option value="expense">Expense</option>
+                      <option value="income">Gain</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span className="input-label">Frequency</span>
+                    <select className="input" value={frequencyFilter} onChange={(e) => setFrequencyFilter(e.target.value)}>
+                      <option value="">All</option>
+                      {FREQUENCY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="input-label">Status</span>
+                    <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                      <option value="">All</option>
+                      <option value="active">Active</option>
+                      <option value="paused">Paused</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="text-xs text-gold-muted font-crimson italic">
+                    Showing {filteredTemplates.length} of {(templates || []).length} templates.
+                  </p>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setTitleFilter('')
+                      setTypeFilter('')
+                      setFrequencyFilter('')
+                      setStatusFilter('')
+                    }}
+                  >
+                    Reset filters
+                  </Button>
+                </div>
+              </CardBody>
+            )}
+          </Card>
+          <Card shimmer>
             <CardHeader title="Prediction Templates">
               <Button
                 variant="primary"
@@ -320,9 +407,13 @@ export default function PredictionsPage() {
               <p className="text-gold-muted font-crimson italic">No prophecy templates yet.</p>
             )}
 
-            {!isLoading && !isError && (templates || []).length > 0 && (
+            {!isLoading && !isError && (templates || []).length > 0 && filteredTemplates.length === 0 && (
+              <p className="text-gold-muted font-crimson italic">No templates match these filters.</p>
+            )}
+
+            {!isLoading && !isError && filteredTemplates.length > 0 && (
               <div className="space-y-3">
-                {templates.map((template) => {
+                {filteredTemplates.map((template) => {
                 const upcoming = instancesByTemplate.get(template.id) || []
                 const nextScheduled = upcoming[0]?.scheduled_date || null
                 const isExpanded = expandedTemplateIds.has(template.id)

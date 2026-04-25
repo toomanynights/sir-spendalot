@@ -6,6 +6,7 @@ import DisplayFormatSync from './DisplayFormatSync'
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
     <div className="app-shell">
@@ -13,9 +14,14 @@ export default function Layout() {
       <div className="bg-glow-right" />
       <div className="bg-glow-left" />
 
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
+      />
 
-      <div className="main-content flex flex-col">
+      <div className={`main-content flex flex-col ${sidebarCollapsed ? 'main-content-collapsed' : ''}`}>
         <DisplayFormatSync />
         {/* Mobile top bar */}
         <header className="topbar">

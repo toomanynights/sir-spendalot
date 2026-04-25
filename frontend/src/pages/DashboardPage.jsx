@@ -25,31 +25,22 @@ export default function DashboardPage() {
         showAccountSwitcher
       />
       <div className="page-container">
-        <div className="grid-dashboard">
-          {/* Column 1: Today's Status & History */}
-          <div className="flex flex-col gap-8">
+        <div className={`grid-dashboard-unified ${isPrimary ? '' : 'grid-dashboard-no-lowest'}`.trim()}>
+          <div className="dashboard-card dashboard-today">
             <TodayFortune />
+          </div>
+          <div className="dashboard-card dashboard-record">
+            <RecordDeed />
+          </div>
+          <div className="dashboard-card dashboard-recent">
             <RecentChronicles />
           </div>
-
-          {isPrimary ? (
-            <>
-              {/* Column 2: Risk Forecast + Upcoming Predictions (Primary only) */}
-              <div className="flex flex-col gap-8">
-                <LowestFortune />
-                <FutureProphecies />
-              </div>
-
-              {/* Column 3: Data Entry */}
-              <div className="flex flex-col gap-8">
-                <RecordDeed />
-              </div>
-            </>
-          ) : (
-            /* Non-primary: Data Entry + Upcoming Predictions */
-            <div className="flex flex-col gap-8">
-              <RecordDeed />
-              <FutureProphecies />
+          <div className="dashboard-card dashboard-future">
+            <FutureProphecies />
+          </div>
+          {isPrimary && (
+            <div className="dashboard-card dashboard-lowest">
+              <LowestFortune />
             </div>
           )}
         </div>
