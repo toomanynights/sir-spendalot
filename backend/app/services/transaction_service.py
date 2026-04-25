@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Optional
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.account import Account
@@ -126,7 +126,15 @@ def get_transactions(
     if account_id is not None:
         q = q.filter(Transaction.account_id == account_id)
     if category_id is not None:
-        q = q.filter(Transaction.category_id == category_id)
+        category_ids = db.scalars(
+            select(Category.id).where(
+                or_(Category.id == category_id, Category.parent_id == category_id)
+            )
+        ).all()
+        if category_ids:
+            q = q.filter(Transaction.category_id.in_(category_ids))
+        else:
+            q = q.filter(Transaction.category_id == category_id)
     if subcategory is not None:
         q = q.filter(Transaction.subcategory.ilike(f"%{subcategory}%"))
     if transaction_type is not None:

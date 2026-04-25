@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Pencil, ScrollText, Trash2, X } from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { categoriesApi } from '../api/categories'
 import { useCategories } from '../hooks/useCategories'
 import {
   TRANSACTIONS_KEY,
   useDeleteTransaction,
   useRestoreTransaction,
-  useSubcategories,
   useTransactions,
   useUpdateTransaction,
 } from '../hooks/useTransactions'
@@ -42,26 +42,49 @@ function filterCategoriesForTxType(categories, txType) {
   return categories.filter((c) => c.type === txType)
 }
 
+function pickParentCategories(categories, txType) {
+  return filterCategoriesForTxType(categories, txType).filter((c) => !c.parent_id)
+}
+
+function parentIdForCategoryId(categories, categoryId) {
+  if (!categoryId) return ''
+  const category = (categories || []).find((c) => c.id === Number(categoryId))
+  if (!category) return String(categoryId)
+  return String(category.parent_id || category.id)
+}
+
+function usedSubcategoriesForParent(subcategoryUsage, parentCategoryId) {
+  if (!parentCategoryId) return []
+  const values = subcategoryUsage?.[String(parentCategoryId)] || []
+  return Array.isArray(values) ? values : []
+}
+
 function EditModal({
   tx,
   onClose,
   onSave,
   categories,
-  subcategories,
+  subcategoryUsage,
   isSaving,
   saveError,
 }) {
   const [form, setForm] = useState({
     amount: tx.amount ?? '',
     transaction_date: tx.transaction_date ?? '',
-    category_id: tx.category_id ?? '',
-    subcategory: tx.subcategory ?? '',
+    parent_category_id: parentIdForCategoryId(categories, tx.category_id),
     description: tx.description ?? '',
+    subcategory_mode: 'listed',
+    subcategory_listed: tx.subcategory ?? '',
+    subcategory_custom: '',
   })
 
   const categoryOptions = useMemo(
-    () => filterCategoriesForTxType(categories || [], tx.type),
+    () => pickParentCategories(categories || [], tx.type),
     [categories, tx.type]
+  )
+  const listedSubcategoryOptions = useMemo(
+    () => usedSubcategoriesForParent(subcategoryUsage, form.parent_category_id),
+    [subcategoryUsage, form.parent_category_id]
   )
 
   function updateField(key, value) {
@@ -70,11 +93,15 @@ function EditModal({
 
   function handleSubmit(e) {
     e.preventDefault()
+    const pickedSubcategory =
+      form.subcategory_mode === 'custom'
+        ? form.subcategory_custom
+        : form.subcategory_listed
     const payload = {
       amount: Number(form.amount),
       transaction_date: form.transaction_date,
-      category_id: form.category_id ? Number(form.category_id) : null,
-      subcategory: form.subcategory.trim() || null,
+      category_id: form.parent_category_id ? Number(form.parent_category_id) : null,
+      subcategory: pickedSubcategory.trim() || null,
       description: form.description.trim() || null,
     }
     onSave(payload)
@@ -123,8 +150,18 @@ function EditModal({
               <span className="input-label">Category</span>
               <select
                 className="input"
-                value={form.category_id}
-                onChange={(e) => updateField('category_id', e.target.value)}
+                value={form.parent_category_id}
+                onChange={(e) => {
+                  const nextParent = e.target.value
+                  setForm((prev) => ({
+                    ...prev,
+                    parent_category_id: nextParent,
+                    subcategory: '',
+                    subcategory_mode: 'listed',
+                    subcategory_listed: '',
+                    subcategory_custom: '',
+                  }))
+                }}
               >
                 <option value="">None</option>
                 {categoryOptions.map((category) => (
@@ -135,16 +172,49 @@ function EditModal({
               </select>
             </label>
 
-            <label>
-              <span className="input-label">Subcategory</span>
-              <input
-                className="input"
-                value={form.subcategory}
-                onChange={(e) => updateField('subcategory', e.target.value)}
-                list="tx-subcategories"
-                maxLength={100}
-              />
-            </label>
+            {form.parent_category_id && (
+              <>
+                <label>
+                  <span className="input-label">Subcategory mode</span>
+                  <select
+                    className="input"
+                    value={form.subcategory_mode}
+                    onChange={(e) => updateField('subcategory_mode', e.target.value)}
+                  >
+                    <option value="listed">From used list</option>
+                    <option value="custom">Type custom</option>
+                  </select>
+                </label>
+                {form.subcategory_mode === 'listed' ? (
+                  <label>
+                    <span className="input-label">Subcategory</span>
+                    <select
+                      className="input"
+                      value={form.subcategory_listed}
+                      onChange={(e) => updateField('subcategory_listed', e.target.value)}
+                    >
+                      <option value="">Any / none</option>
+                      {listedSubcategoryOptions.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <label>
+                    <span className="input-label">Subcategory</span>
+                    <input
+                      className="input"
+                      value={form.subcategory_custom}
+                      onChange={(e) => updateField('subcategory_custom', e.target.value)}
+                      maxLength={100}
+                      placeholder="Type custom subcategory"
+                    />
+                  </label>
+                )}
+              </>
+            )}
 
             <label className="md:col-span-2">
               <span className="input-label">Description</span>
@@ -169,11 +239,6 @@ function EditModal({
               </Button>
             </div>
           </form>
-          <datalist id="tx-subcategories">
-            {(subcategories || []).map((item) => (
-              <option key={item} value={item} />
-            ))}
-          </datalist>
         </div>
       </div>
     </div>
@@ -207,7 +272,11 @@ export default function TransactionsPage() {
 
   const { data: transactions, isLoading, isError, error } = useTransactions(filters)
   const { data: categories } = useCategories()
-  const { data: subcategories } = useSubcategories()
+  const { data: subcategoryUsage } = useQuery({
+    queryKey: ['category-subcategory-usage'],
+    queryFn: categoriesApi.subcategoryUsage,
+    staleTime: 2 * 60_000,
+  })
   const updateTx = useUpdateTransaction()
   const deleteTx = useDeleteTransaction()
   const restoreTx = useRestoreTransaction()
@@ -219,9 +288,15 @@ export default function TransactionsPage() {
   const hasPrev = page > 1
   const hasNext = (transactions || []).length === PAGE_SIZE
   const categoryOptions = useMemo(
-    () => filterCategoriesForTxType(categories || [], transactionType),
+    () => pickParentCategories(categories || [], transactionType),
     [categories, transactionType]
   )
+  const filterSubcategoryOptions = useMemo(
+    () => usedSubcategoriesForParent(subcategoryUsage, categoryId),
+    [subcategoryUsage, categoryId]
+  )
+  const [subcategoryMode, setSubcategoryMode] = useState('listed')
+  const [subcategoryCustom, setSubcategoryCustom] = useState('')
 
   function setParam(key, value) {
     const next = new URLSearchParams(searchParams)
@@ -229,6 +304,17 @@ export default function TransactionsPage() {
     else next.set(key, value)
     next.delete('page')
     setSearchParams(next)
+  }
+
+  function setCategoryParam(value) {
+    const next = new URLSearchParams(searchParams)
+    if (!value) next.delete('category_id')
+    else next.set('category_id', value)
+    next.delete('subcategory')
+    next.delete('page')
+    setSearchParams(next)
+    setSubcategoryCustom('')
+    setSubcategoryMode('listed')
   }
 
   function changePage(nextPage) {
@@ -263,6 +349,8 @@ export default function TransactionsPage() {
 
   async function clearAllFilters() {
     setSearchParams(new URLSearchParams())
+    setSubcategoryCustom('')
+    setSubcategoryMode('listed')
     await qc.invalidateQueries({ queryKey: TRANSACTIONS_KEY })
   }
 
@@ -315,33 +403,6 @@ export default function TransactionsPage() {
             </label>
 
             <label>
-              <span className="input-label">Category</span>
-              <select
-                className="input"
-                value={categoryId}
-                onChange={(e) => setParam('category_id', e.target.value)}
-              >
-                <option value="">All categories</option>
-                {categoryOptions.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span className="input-label">Subcategory contains</span>
-              <input
-                className="input"
-                value={subcategory}
-                onChange={(e) => setParam('subcategory', e.target.value)}
-                placeholder="Groceries, rent, etc."
-                list="tx-subcategories"
-              />
-            </label>
-
-            <label>
               <span className="input-label">Transaction type</span>
               <select
                 className="input"
@@ -355,6 +416,73 @@ export default function TransactionsPage() {
                 ))}
               </select>
             </label>
+
+            <label>
+              <span className="input-label">Category</span>
+              <select
+                className="input"
+                value={categoryId}
+                onChange={(e) => setCategoryParam(e.target.value)}
+              >
+                <option value="">All categories</option>
+                {categoryOptions.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {categoryId && (
+              <>
+                <label>
+                  <span className="input-label">Subcategory mode</span>
+                  <select
+                    className="input"
+                    value={subcategoryMode}
+                    onChange={(e) => {
+                      const mode = e.target.value
+                      setSubcategoryMode(mode)
+                      setParam('subcategory', mode === 'listed' ? '' : subcategoryCustom)
+                    }}
+                  >
+                    <option value="listed">From used list</option>
+                    <option value="custom">Type custom</option>
+                  </select>
+                </label>
+                {subcategoryMode === 'listed' ? (
+                  <label>
+                    <span className="input-label">Subcategory</span>
+                    <select
+                      className="input"
+                      value={subcategory}
+                      onChange={(e) => setParam('subcategory', e.target.value)}
+                    >
+                      <option value="">All used subcategories</option>
+                      {filterSubcategoryOptions.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <label>
+                    <span className="input-label">Subcategory contains</span>
+                    <input
+                      className="input"
+                      value={subcategoryCustom}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setSubcategoryCustom(value)
+                        setParam('subcategory', value)
+                      }}
+                      placeholder="Groceries, rent, etc."
+                    />
+                  </label>
+                )}
+              </>
+            )}
               </div>
 
               <div className="mt-4 flex items-center justify-between gap-4">
@@ -371,11 +499,6 @@ export default function TransactionsPage() {
                   Reset filters
                 </Button>
               </div>
-              <datalist id="tx-subcategories">
-                {(subcategories || []).map((item) => (
-                  <option key={item} value={item} />
-                ))}
-              </datalist>
             </CardBody>
           )}
         </Card>
@@ -499,7 +622,7 @@ export default function TransactionsPage() {
             }}
             onSave={handleSave}
             categories={categories}
-            subcategories={subcategories}
+            subcategoryUsage={subcategoryUsage}
             isSaving={updateTx.isPending}
             saveError={saveError}
           />

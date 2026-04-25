@@ -68,7 +68,7 @@
 - [ ] 7.3 - Data migration tool (from Google Sheets)
 - [x] 7.4 - UI improvements (see specs)
 - [x] 7.5 - Default payment method — add to Treasury; make selected by default when submitting via dashboard block / Quick entry (per account)
-- [ ] 7.7 - Chronicles improvement
+- [x] 7.7 - Chronicles improvement
 - [ ] 7.8 - Explicit income/expense control
 - [ ] 7.9 - Components reuse
 - [ ] 7.10 - Browser notifications for predictions about to go overdue / already overdue (with setting: on/off + time)
@@ -1851,6 +1851,14 @@ GET /api/stats/insights?date_from=&date_to=&account_id=
 
 **What:** Default payment method selected when submitting a transaction from the dashboard **Record Thy Deed** block and **Quick entry**; configurable per account.
 
+**Specs (implemented):**
+- **Backend model/API:** `accounts.default_payment_method_id` (nullable FK → `payment_methods`, `ON DELETE SET NULL`) added and exposed in account create/update/response payloads.
+- **Treasury UI:** Account create/edit modal includes **Default payment method** selector (`None` + available payment methods).
+- **Dashboard (`Record Thy Deed`):** payment method field preselects selected account default.
+- **Quick Entry (plain rows):** new rows (add/duplicate/reset) prefill payment method from selected account default.
+- **Quick Entry (prediction-linked rows):** payment method uses template default first; if absent, falls back to selected account default.
+- **Account switch behavior:** existing unsaved Quick Entry rows keep their current values; only newly added rows use the newly selected account default.
+
 **Mark complete:** `[x] 7.5 - Default payment method (per account)`
 
 ---
@@ -1863,10 +1871,18 @@ GET /api/stats/insights?date_from=&date_to=&account_id=
 
 ### Task 7.7: Chronicles improvement
 
-- category: switch to parent categories only
-- subcategory: switch to dropdown containing all of the selected category's subcategories; show only when category is selected
+**What:** Improve Chronicles filters/edit UX by moving category handling to parent categories and making subcategory selection guided.
 
-**Mark complete:** `[ ] 7.7 - Chronicles improvement`
+**Specs:**
+- **Category selection:** use **parent categories only** in Chronicles filters and edit modal.
+- **Parent-category filtering behavior:** selecting a parent category includes transactions saved either directly on that parent or on its child categories.
+- **Subcategory control (filters):** shown only when a parent category is selected.
+- **Subcategory control (edit modal):** driven by selected parent category.
+- **Subcategory options source:** use `GET /api/categories/subcategory-usage` mapping (`parent_id -> used subcategory list`) when available; do not add new backend endpoint for this feature.
+- **Input mode:** dropdown + custom fallback (user can still type a custom subcategory when needed).
+- **Dependent reset:** changing/clearing selected parent category clears selected subcategory filter/value to avoid stale combinations.
+
+**Mark complete:** `[x] 7.7 - Chronicles improvement`
 
 ---
 
@@ -1887,7 +1903,8 @@ Reuse components wherever possible for design unification:
 - in Treasury, account type display (current/savings) is different from pill style as in topbar; 
 - "whisper" in Thy Lowest Fortunes dashboard block (Forecasted over the next X days) seems to be used in that single place only;
 - etc...
-Suggest replacements where appropriate before implementing
+Suggest replacements where appropriate before implementing.
+After implementing and before moving to next feature, introduce rule change that will make the agent in future defelopment prioritize reusing components intead of creating new ones.
 
 **Mark complete:** `[ ] 7.9 - Components reuse`
 
