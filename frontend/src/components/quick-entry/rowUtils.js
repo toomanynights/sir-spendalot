@@ -2,7 +2,7 @@ export function todayStr() {
   return new Date().toISOString().split('T')[0]
 }
 
-export function createEmptyRow() {
+export function createEmptyRow(defaultPaymentMethodId = '') {
   return {
     id: crypto.randomUUID(),
     kind: 'plain',
@@ -14,7 +14,7 @@ export function createEmptyRow() {
     date: todayStr(),
     parentCategoryId: '',
     subcategory: '',
-    paymentMethodId: '',
+    paymentMethodId: defaultPaymentMethodId ? String(defaultPaymentMethodId) : '',
     description: '',
     collapsed: false,
     submitError: null,
@@ -28,7 +28,7 @@ export function canCollapseRow(row) {
 }
 
 /** @param {object} instance — prediction instance from GET /api/predictions/instances */
-export function createPredictionRow(instance) {
+export function createPredictionRow(instance, fallbackPaymentMethodId = '') {
   const raw = parseFloat(instance.amount)
   const abs = Number.isFinite(raw) ? Math.abs(raw) : ''
   return {
@@ -44,7 +44,7 @@ export function createPredictionRow(instance) {
     subcategory: '',
     paymentMethodId: instance.template_payment_method_id
       ? String(instance.template_payment_method_id)
-      : '',
+      : (fallbackPaymentMethodId ? String(fallbackPaymentMethodId) : ''),
     description: '',
     collapsed: false,
     submitError: null,

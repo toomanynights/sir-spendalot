@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ScrollText, Plus, Check, AlertCircle, ChevronDown, ChevronUp, Calendar } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCreateTransaction, useSubcategories } from '../../hooks/useTransactions'
@@ -21,7 +21,7 @@ const today = () => new Date().toISOString().split('T')[0]
 
 export default function RecordDeed() {
   const qc = useQueryClient()
-  const { selectedId } = useSelectedAccount()
+  const { selectedId, selectedAccount } = useSelectedAccount()
   const { data: categories } = useCategories()
   const { data: paymentMethods } = usePaymentMethods()
   const { data: settings } = useSettings()
@@ -32,6 +32,15 @@ export default function RecordDeed() {
   const [parentCategoryId, setParentCategoryId] = useState('')
   const [subcategory, setSubcategory]         = useState('')
   const [paymentMethodId, setPaymentMethodId] = useState('')
+  useEffect(() => {
+    if (!selectedAccount) return
+    setPaymentMethodId(
+      selectedAccount.default_payment_method_id
+        ? String(selectedAccount.default_payment_method_id)
+        : ''
+    )
+  }, [selectedAccount?.id, selectedAccount?.default_payment_method_id])
+
 
   const [showDetails, setShowDetails]         = useState(false)
   const [date, setDate]                       = useState(today())
@@ -116,7 +125,11 @@ export default function RecordDeed() {
       setAmount('')
       setParentCategoryId('')
       setSubcategory('')
-      setPaymentMethodId('')
+      setPaymentMethodId(
+        selectedAccount?.default_payment_method_id
+          ? String(selectedAccount.default_payment_method_id)
+          : ''
+      )
       setDate(today())
       setDescription('')
       setIsSuccess(true)

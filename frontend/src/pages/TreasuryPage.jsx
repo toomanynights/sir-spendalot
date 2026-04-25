@@ -29,7 +29,7 @@ function sortAccountsForDisplay(accounts) {
   })
 }
 
-function AccountFormModal({ mode, account, onClose, onAfterSave }) {
+function AccountFormModal({ mode, account, paymentMethods, onClose, onAfterSave }) {
   const isCreate = mode === 'create'
   const [name, setName] = useState(account?.name || '')
   const [accountType, setAccountType] = useState(account?.account_type || 'current')
@@ -37,6 +37,9 @@ function AccountFormModal({ mode, account, onClose, onAfterSave }) {
     isCreate ? (account?.initial_balance != null ? String(account.initial_balance) : '0') : ''
   )
   const [isPrimary, setIsPrimary] = useState(!!account?.is_primary)
+  const [defaultPaymentMethodId, setDefaultPaymentMethodId] = useState(
+    account?.default_payment_method_id ? String(account.default_payment_method_id) : ''
+  )
   const [saveError, setSaveError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -51,12 +54,18 @@ function AccountFormModal({ mode, account, onClose, onAfterSave }) {
           account_type: accountType,
           is_primary: isPrimary,
           initial_balance: Number(initialBalance || 0),
+          default_payment_method_id: defaultPaymentMethodId
+            ? Number(defaultPaymentMethodId)
+            : null,
         })
       } else {
         await accountsApi.update(account.id, {
           name: name.trim(),
           account_type: accountType,
           is_primary: isPrimary ? true : undefined,
+          default_payment_method_id: defaultPaymentMethodId
+            ? Number(defaultPaymentMethodId)
+            : null,
         })
       }
       await onAfterSave()
@@ -89,6 +98,22 @@ function AccountFormModal({ mode, account, onClose, onAfterSave }) {
               <select className="input" value={accountType} onChange={(e) => setAccountType(e.target.value)}>
                 <option value="current">Current</option>
                 <option value="savings">Savings</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="input-label">Default payment method</span>
+              <select
+                className="input"
+                value={defaultPaymentMethodId}
+                onChange={(e) => setDefaultPaymentMethodId(e.target.value)}
+              >
+                <option value="">- None -</option>
+                {(paymentMethods || []).map((pm) => (
+                  <option key={pm.id} value={String(pm.id)}>
+                    {pm.name}
+                  </option>
+                ))}
               </select>
             </label>
 
@@ -672,10 +697,22 @@ export default function TreasuryPage() {
       </div>
 
       {accountModal?.mode === 'create' ? (
-        <AccountFormModal mode="create" account={null} onClose={() => setAccountModal(null)} onAfterSave={refreshAfterMutation} />
+        <AccountFormModal
+          mode="create"
+          account={null}
+          paymentMethods={paymentMethods}
+          onClose={() => setAccountModal(null)}
+          onAfterSave={refreshAfterMutation}
+        />
       ) : null}
       {accountModal?.mode === 'edit' && accountModal.account ? (
-        <AccountFormModal mode="edit" account={accountModal.account} onClose={() => setAccountModal(null)} onAfterSave={refreshAfterMutation} />
+        <AccountFormModal
+          mode="edit"
+          account={accountModal.account}
+          paymentMethods={paymentMethods}
+          onClose={() => setAccountModal(null)}
+          onAfterSave={refreshAfterMutation}
+        />
       ) : null}
 
       {correctionAccount ? (

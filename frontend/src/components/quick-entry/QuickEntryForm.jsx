@@ -25,7 +25,12 @@ function errMessage(e, fallback) {
   return fallback
 }
 
-export default function QuickEntryForm({ rows, setRows, scrollAnchorRef }) {
+export default function QuickEntryForm({
+  rows,
+  setRows,
+  scrollAnchorRef,
+  defaultPaymentMethodId = '',
+}) {
   const qc = useQueryClient()
   const { selectedId } = useSelectedAccount()
   const { data: categories } = useCategories()
@@ -42,7 +47,7 @@ export default function QuickEntryForm({ rows, setRows, scrollAnchorRef }) {
 
   function deleteRow(id) {
     setRows((prev) => {
-      if (prev.length <= 1) return [createEmptyRow()]
+      if (prev.length <= 1) return [createEmptyRow(defaultPaymentMethodId)]
       return prev.filter((r) => r.id !== id)
     })
   }
@@ -54,7 +59,7 @@ export default function QuickEntryForm({ rows, setRows, scrollAnchorRef }) {
   }
 
   function addEmptyRow() {
-    const newRow = createEmptyRow()
+    const newRow = createEmptyRow(defaultPaymentMethodId)
     setRows((prev) => [...prev, newRow])
     focusAmountByRowId(newRow.id)
   }
@@ -65,7 +70,7 @@ export default function QuickEntryForm({ rows, setRows, scrollAnchorRef }) {
         if (prev[i].kind === 'plain') {
           const src = prev[i]
           const newRow = {
-            ...createEmptyRow(),
+            ...createEmptyRow(defaultPaymentMethodId),
             deedType: src.deedType,
             date: src.date,
             parentCategoryId: src.parentCategoryId,
@@ -245,7 +250,7 @@ export default function QuickEntryForm({ rows, setRows, scrollAnchorRef }) {
     const completeSuccess = hadWork && allPredOk && batchSuccess
 
     setRows((prev) => {
-      if (completeSuccess) return [createEmptyRow()]
+      if (completeSuccess) return [createEmptyRow(defaultPaymentMethodId)]
 
       const removeIds = new Set()
       for (const pr of predResults) {
@@ -263,7 +268,7 @@ export default function QuickEntryForm({ rows, setRows, scrollAnchorRef }) {
           return { ...r, submitError: null }
         })
 
-      return next.length === 0 ? [createEmptyRow()] : next
+      return next.length === 0 ? [createEmptyRow(defaultPaymentMethodId)] : next
     })
 
     setSubmitting(false)

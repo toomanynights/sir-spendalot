@@ -67,7 +67,7 @@
 - [x] 7.2 - Enforce auth (swap optional_auth → require_auth on all routes; verify login page redirects correctly)
 - [ ] 7.3 - Data migration tool (from Google Sheets)
 - [x] 7.4 - UI improvements (see specs)
-- [ ] 7.5 - Default payment method — add to Treasury; make selected by default when submitting via dashboard block / Quick entry (per account)
+- [x] 7.5 - Default payment method — add to Treasury; make selected by default when submitting via dashboard block / Quick entry (per account)
 - [ ] 7.7 - Chronicles improvement
 - [ ] 7.8 - Explicit income/expense control
 - [ ] 7.9 - Components reuse
@@ -92,7 +92,7 @@
 ### Phase 10: Rolling predictions ✅ / ❌
 - [ ] 10.0 - Feature initiation (see specs)
 
-### Phase 11: Mobile layout (note: for every page, analyze if it's possible/worthwhile to transition the page into responsive design, or alternatives preferrable - hide the whole page/parts of content/suggest using desktop...) ✅ / ❌
+### Phase 11: Mobile layout (note: for every page, analyze if it's possible/worthwhile to transition the page into responsive design, or alternatives preferrable - hide the whole page/parts of content/suggest using desktop... Some pages/elements already adapted to mobile - "no change needed" is also a valid answer) ✅ / ❌
 - [ ] 11.1 - General components (sidear, topbar, general page content)
 - [ ] 11.2 - Dashboard page, floating assistant
 - [ ] 11.3 - Quick Entry page
@@ -1851,7 +1851,7 @@ GET /api/stats/insights?date_from=&date_to=&account_id=
 
 **What:** Default payment method selected when submitting a transaction from the dashboard **Record Thy Deed** block and **Quick entry**; configurable per account.
 
-**Mark complete:** `[ ] 7.5 - Default payment method (per account)`
+**Mark complete:** `[x] 7.5 - Default payment method (per account)`
 
 ---
 

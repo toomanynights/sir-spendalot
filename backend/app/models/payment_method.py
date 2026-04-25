@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
+    from app.models.account import Account
     from app.models.transaction import Transaction
 
 
@@ -25,3 +26,6 @@ class PaymentMethod(Base):
     )
 
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="payment_method")
+    default_for_accounts: Mapped[list["Account"]] = relationship(
+        foreign_keys="Account.default_payment_method_id"
+    )

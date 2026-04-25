@@ -2,12 +2,13 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Numeric, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
 if TYPE_CHECKING:
+    from app.models.payment_method import PaymentMethod
     from app.models.transaction import Transaction
     from app.models.prediction import PredictionTemplate, PredictionInstance
     from app.models.transfer import Transfer
@@ -21,6 +22,9 @@ class Account(Base):
     account_type: Mapped[str] = mapped_column(String(50), nullable=False)  # current/savings (extensible)
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     initial_balance: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)
+    default_payment_method_id: Mapped[int | None] = mapped_column(
+        ForeignKey("payment_methods.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -39,4 +43,7 @@ class Account(Base):
     )
     transfers_in: Mapped[list["Transfer"]] = relationship(
         back_populates="to_account", foreign_keys="Transfer.to_account_id"
+    )
+    default_payment_method: Mapped["PaymentMethod | None"] = relationship(
+        foreign_keys=[default_payment_method_id]
     )

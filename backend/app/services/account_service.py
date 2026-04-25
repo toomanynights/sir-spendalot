@@ -7,6 +7,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.account import Account
+from app.models.payment_method import PaymentMethod
 from app.models.prediction import PredictionTemplate
 from app.models.transaction import Transaction
 from app.models.transfer import Transfer
@@ -44,6 +45,7 @@ def _to_response(db: Session, account: Account) -> AccountResponse:
             "account_type": account.account_type,
             "is_primary": account.is_primary,
             "initial_balance": account.initial_balance,
+            "default_payment_method_id": account.default_payment_method_id,
             "current_balance": _compute_balance(db, account),
             "created_at": account.created_at,
         }
@@ -63,6 +65,19 @@ def _get_or_404(db: Session, account_id: int) -> Account:
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     return account
+
+
+def _validate_default_payment_method(
+    db: Session, payment_method_id: Optional[int]
+) -> Optional[int]:
+    if payment_method_id is None:
+        return None
+    exists = db.scalar(
+        select(func.count()).select_from(PaymentMethod).where(PaymentMethod.id == payment_method_id)
+    )
+    if not exists:
+        raise HTTPException(status_code=422, detail="Default payment method not found")
+    return payment_method_id
 
 
 # ------------------------------------------------------------------ #
@@ -92,6 +107,9 @@ def create_account(db: Session, data: AccountCreate) -> AccountResponse:
         account_type=data.account_type,
         is_primary=data.is_primary,
         initial_balance=data.initial_balance,
+        default_payment_method_id=_validate_default_payment_method(
+            db, data.default_payment_method_id
+        ),
     )
     db.add(account)
     db.commit()
@@ -107,7 +125,13 @@ def update_account(
     if data.is_primary is True:
         _clear_primary(db, exclude_id=account_id)
 
-    for key, value in data.model_dump(exclude_unset=True).items():
+    payload = data.model_dump(exclude_unset=True)
+    if "default_payment_method_id" in payload:
+        payload["default_payment_method_id"] = _validate_default_payment_method(
+            db, payload["default_payment_method_id"]
+        )
+
+    for key, value in payload.items():
         setattr(account, key, value)
 
     db.commit()

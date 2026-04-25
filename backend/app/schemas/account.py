@@ -16,6 +16,7 @@ class AccountCreate(BaseModel):
     account_type: AccountType
     is_primary: bool = False
     initial_balance: Decimal = Field(default=Decimal("0"), decimal_places=2)
+    default_payment_method_id: Optional[int] = None
 
 
 class AccountUpdate(BaseModel):
@@ -23,6 +24,7 @@ class AccountUpdate(BaseModel):
     account_type: Optional[AccountType] = None
     is_primary: Optional[bool] = None
     initial_balance: Optional[Decimal] = Field(None, decimal_places=2)
+    default_payment_method_id: Optional[int] = None
 
 
 class AccountResponse(BaseModel):
@@ -33,6 +35,7 @@ class AccountResponse(BaseModel):
     account_type: str
     is_primary: bool
     initial_balance: Decimal
+    default_payment_method_id: Optional[int] = None
     current_balance: Decimal
     created_at: datetime
 

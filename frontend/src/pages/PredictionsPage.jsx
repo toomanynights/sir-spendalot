@@ -11,6 +11,7 @@ import {
   useSkipInstance,
   useUpdatePredictionTemplate,
 } from '../hooks/usePredictions'
+import { usePaymentMethods } from '../hooks/usePaymentMethods'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
@@ -35,7 +36,16 @@ function frequencyLabel(template) {
   return template.frequency
 }
 
-function TemplateModal({ mode, template, accountName, onClose, onSave, isSaving, saveError }) {
+function TemplateModal({
+  mode,
+  template,
+  accountName,
+  paymentMethods,
+  onClose,
+  onSave,
+  isSaving,
+  saveError,
+}) {
   const isCreate = mode === 'create'
   const [form, setForm] = useState({
     name: template?.name || '',
@@ -45,6 +55,7 @@ function TemplateModal({ mode, template, accountName, onClose, onSave, isSaving,
     interval: template?.interval ? String(template.interval) : '',
     day_of_month: template?.day_of_month ? String(template.day_of_month) : '',
     start_date: template?.start_date || new Date().toISOString().split('T')[0],
+    payment_method_id: template?.payment_method_id ? String(template.payment_method_id) : '',
   })
 
   function setField(key, value) {
@@ -61,6 +72,7 @@ function TemplateModal({ mode, template, accountName, onClose, onSave, isSaving,
       start_date: form.start_date,
       interval: form.frequency === 'every_n_days' ? Number(form.interval) : null,
       day_of_month: form.frequency === 'monthly' ? Number(form.day_of_month) : null,
+      payment_method_id: form.payment_method_id ? Number(form.payment_method_id) : null,
     }
     const payload = isCreate
       ? basePayload
@@ -140,6 +152,21 @@ function TemplateModal({ mode, template, accountName, onClose, onSave, isSaving,
                 required
               />
             </label>
+            <label>
+              <span className="input-label">Default payment method</span>
+              <select
+                className="input"
+                value={form.payment_method_id}
+                onChange={(e) => setField('payment_method_id', e.target.value)}
+              >
+                <option value="">- None -</option>
+                {(paymentMethods || []).map((pm) => (
+                  <option key={pm.id} value={String(pm.id)}>
+                    {pm.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             {form.frequency === 'every_n_days' && (
               <label>
                 <span className="input-label">Interval (days)</span>
@@ -185,6 +212,7 @@ function TemplateModal({ mode, template, accountName, onClose, onSave, isSaving,
 
 export default function PredictionsPage() {
   const { selectedId, selectedAccount } = useSelectedAccount()
+  const { data: paymentMethods } = usePaymentMethods()
   const { data: templates, isLoading, isError, error } = usePredictionTemplates(selectedId)
   const { data: pendingInstances } = usePredictionInstances(
     selectedId ? { status: 'pending', account_id: selectedId } : { status: 'pending' }
@@ -550,6 +578,7 @@ export default function PredictionsPage() {
           mode="create"
           template={null}
           accountName={selectedAccount?.name}
+          paymentMethods={paymentMethods}
           onClose={() => {
             setIsCreateOpen(false)
             setSaveError('')
@@ -565,6 +594,7 @@ export default function PredictionsPage() {
           mode="edit"
           template={editingTemplate}
           accountName={selectedAccount?.name}
+          paymentMethods={paymentMethods}
           onClose={() => {
             setEditingTemplate(null)
             setSaveError('')
