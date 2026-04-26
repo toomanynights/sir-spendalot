@@ -11,6 +11,7 @@ import PredictionsPage from './pages/PredictionsPage'
 import AnalyticsPage   from './pages/AnalyticsPage'
 import SettingsPage    from './pages/SettingsPage'
 import TreasuryPage    from './pages/TreasuryPage'
+import ImporterPage    from './pages/ImporterPage'
 
 function ProtectedLayout() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="analytics"    element={<AnalyticsPage />} />
           <Route path="treasury"     element={<TreasuryPage />} />
           <Route path="settings"     element={<SettingsPage />} />
+          <Route path="settings/import" element={<ImporterPage />} />
         </Route>
 
         {/* Catch-all */}

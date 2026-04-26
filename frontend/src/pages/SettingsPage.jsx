@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarX2, ChevronLeft, ChevronRight, Settings, Trash2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import PageContextHeader from '../components/layout/PageContextHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -12,6 +13,7 @@ import {
   useUpdateSettings,
 } from '../hooks/useSettings'
 import { formatDate } from '../utils/format'
+import { importerApi } from '../api/importer'
 
 const todayStr = () => new Date().toISOString().split('T')[0]
 
@@ -65,6 +67,11 @@ export default function SettingsPage() {
   const [excludedReason, setExcludedReason] = useState('')
   const [excludedError, setExcludedError] = useState('')
   const [excludedPage, setExcludedPage] = useState(0)
+  const [backupFile, setBackupFile] = useState(null)
+  const [opsBusy, setOpsBusy] = useState('')
+  const [opsError, setOpsError] = useState('')
+  const [opsSuccess, setOpsSuccess] = useState('')
+  const restoreInputRef = useRef(null)
 
   useEffect(() => {
     if (!settings) return
@@ -180,6 +187,71 @@ export default function SettingsPage() {
       await deleteExcludedDay.mutateAsync(dateStr)
     } catch (err) {
       setExcludedError(err?.message || 'Could not remove excluded day.')
+    }
+  }
+
+  async function handleBackupDownload() {
+    setOpsBusy('backup')
+    setOpsError('')
+    setOpsSuccess('')
+    try {
+      const res = await importerApi.backup()
+      const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `spendalot-user-backup-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      setOpsSuccess('Backup downloaded.')
+    } catch (e) {
+      setOpsError(e?.message || 'Backup failed.')
+    } finally {
+      setOpsBusy('')
+    }
+  }
+
+  async function handleRestore(fileToRestore) {
+    if (!fileToRestore) return
+    setOpsBusy('restore')
+    setOpsError('')
+    setOpsSuccess('')
+    try {
+      await importerApi.restoreJsonFile(fileToRestore)
+      setOpsSuccess('Restore completed.')
+    } catch (e) {
+      setOpsError(e?.message || 'Restore failed.')
+    } finally {
+      setOpsBusy('')
+    }
+  }
+
+  function handleRestoreClick() {
+    restoreInputRef.current?.click()
+  }
+
+  async function handleRestoreFileChange(e) {
+    const file = e.target.files?.[0] || null
+    setBackupFile(file)
+    if (file) {
+      await handleRestore(file)
+    }
+    e.target.value = ''
+  }
+
+  async function handleNuke() {
+    const ok = window.prompt('Type NUKE to confirm data wipe')
+    if (ok !== 'NUKE') return
+    setOpsBusy('nuke')
+    setOpsError('')
+    setOpsSuccess('')
+    try {
+      await importerApi.nuke()
+      setOpsSuccess('All user data wiped.')
+    } catch (e) {
+      setOpsError(e?.message || 'Nuke failed.')
+    } finally {
+      setOpsBusy('')
     }
   }
 
@@ -383,6 +455,52 @@ export default function SettingsPage() {
                   </button>
                 </div>
               ) : null}
+            </CardBody>
+          </Card>
+
+          <Card shimmer>
+            <CardHeader title="Historical Import" />
+            <CardBody className="space-y-3">
+              <p className="card-subtitle">
+                Upload CSV exports, map legacy categories, run dry preview, and commit import.
+              </p>
+              <div className="flex flex-wrap gap-2 md:flex-nowrap">
+                <Link to="/settings/import">
+                  <Button variant="primary">Open importer</Button>
+                </Link>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card shimmer>
+            <CardHeader title="Data Operations" />
+            <CardBody className="space-y-4">
+              <p className="card-subtitle">
+                Backup, restore, or nuke user data (including importer mappings).
+              </p>
+              <div className="flex flex-wrap gap-2 md:flex-nowrap">
+                <Button onClick={handleBackupDownload} disabled={!!opsBusy}>
+                  Backup user data
+                </Button>
+                <Button variant="ghost" onClick={handleRestoreClick} disabled={!!opsBusy}>
+                  Restore
+                </Button>
+                <Button variant="danger" onClick={handleNuke} disabled={!!opsBusy}>
+                  Nuke user data
+                </Button>
+              </div>
+              <input
+                ref={restoreInputRef}
+                className="hidden"
+                type="file"
+                accept=".json,application/json"
+                onChange={handleRestoreFileChange}
+              />
+              {backupFile ? (
+                <p className="text-xs text-gold-muted font-crimson">Selected restore file: {backupFile.name}</p>
+              ) : null}
+              {opsError ? <p className="text-sm text-danger font-crimson">{opsError}</p> : null}
+              {opsSuccess ? <p className="text-sm text-success font-crimson">{opsSuccess}</p> : null}
             </CardBody>
           </Card>
         </div>

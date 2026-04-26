@@ -8,6 +8,7 @@ from app.api import (
     auth,
     categories,
     excluded_days,
+    importer,
     payment_methods,
     predictions,
     settings as settings_api,
@@ -61,6 +62,7 @@ app.include_router(stats.router)
 app.include_router(settings_api.router)
 app.include_router(excluded_days.router)
 app.include_router(transfers.router)
+app.include_router(importer.router)
 
 
 @app.get("/api/health")

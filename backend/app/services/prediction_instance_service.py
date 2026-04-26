@@ -45,7 +45,10 @@ def _compute_scheduled_dates(template: PredictionTemplate, horizon_days: int) ->
 
     elif freq == "monthly":
         year, month = template.start_date.year, template.start_date.month
-        dom = template.day_of_month
+        # Defensive fallback for legacy/bad rows: monthly templates should have
+        # day_of_month, but if it's missing use start_date.day.
+        dom = template.day_of_month or template.start_date.day
+        dom = max(1, min(31, int(dom)))
         while True:
             try:
                 d = date(year, month, dom)

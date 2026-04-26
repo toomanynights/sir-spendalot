@@ -28,6 +28,7 @@ tables = [
     "transfers",
     "transactions",
     "excluded_days",
+    "import_mappings",
     "categories",
     "payment_methods",
     "settings",

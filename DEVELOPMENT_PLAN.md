@@ -65,11 +65,11 @@
 
 ### Phase 7: Additional Features ✅ / ❌
 - [x] 7.2 - Enforce auth (swap optional_auth → require_auth on all routes; verify login page redirects correctly)
-- [ ] 7.3 - Data migration tool (from Google Sheets)
+- [x] 7.3 - Data migration tool (from Google Sheets)
 - [x] 7.4 - UI improvements (see specs)
 - [x] 7.5 - Default payment method — add to Treasury; make selected by default when submitting via dashboard block / Quick entry (per account)
 - [x] 7.7 - Chronicles improvement
-- [ ] 7.8 - Explicit income/expense control
+- [ ] 7.8 - Explicit income/expense control (and filter categories everywhere: Record Thy Deed, Quick entry...) (and add category type to Unplanned - income/expense)
 - [ ] 7.9 - Components reuse
 - [ ] 7.10 - Browser notifications for predictions about to go overdue / already overdue (with setting: on/off + time)
 
@@ -88,6 +88,9 @@
 - [ ] 9.5 - Analytics overhaul
 - [ ] 9.6 - add an optional line on top of "Thy Lowest Fortunes" block, showing the date when the account will go below zero (if present)
 - [ ] 9.7 - make "Show predictive features on non-primary accounts" setting actualy work (dashboard + analytics with the same logic as in dashboard)
+- [ ] 9.8 - Implement PWA support
+- [ ] 9.9 - Optional normalized subcategory model (`subcategory_id`) with backward-compatible text fallback
+- [ ] 9.10 - Color-code (expenses vs earnings) "Future Prophecies" block (Dashboard) + Prophecies Awaiting (Quick entry)
 
 ### Phase 10: Rolling predictions ✅ / ❌
 - [ ] 10.0 - Feature initiation (see specs)
@@ -1817,19 +1820,84 @@ GET /api/stats/insights?date_from=&date_to=&account_id=
 
 ### Task 7.3: Data migration tool (from Google Sheets)
 
-**What:** One-time import script to bring historical data from Google Sheets.
+**What:** Import historical data from exported table into Sir Spendalot with mapping + dry run.
 
-**Steps:**
-1. Export Google Sheets to CSV/JSON
-2. Define category mapping config (old names → new category ids)
-3. Script imports: accounts → categories → transactions → prediction templates
-4. Dry-run mode: validate and report without writing to DB
-5. Error report: rows that failed mapping, duplicates, date parse errors
+**Input format (MVP):**
+- **CSV upload** via UI (easiest setup; no Google API credentials required).
+- Source columns:
+  - `Date`
+  - `Category`
+  - `Subcategory`
+  - `Sum`
+  - `From bot` (ignored)
+  - `Applied` (ignored)
+  - `Delete`
+- Parse rules from sample:
+  - `Date` format: `DD/MM/YYYY`
+  - `Sum` examples: `€50.0`, `"€3,068.0"` (strip currency symbol + thousands separators)
+  - `Delete`: treat `TRUE` as deleted row (skip import)
 
-**Deliverables:**
-- `backend/scripts/migrate_sheets.py`
+**Location / UX:**
+- Add link in **Settings** page: "Import historical data (CSV)".
+- No dedicated sidebar navigation item.
+- Open import wizard page/modal from Settings.
 
-**Mark complete:** `[ ] 7.3 - Data migration tool (from Google Sheets)`
+**Wizard flow:**
+1. Upload CSV and parse rows
+2. Validate rows and show preview/errors
+3. Build unique source keys by `(Category, Subcategory)` and map each key
+4. Dry-run summary (no writes): projected per-account balance after import
+5. Confirm import and show results report
+
+**Mapping rules (by source `Category`):**
+- `💸 Daily`:
+  - map to Sir Spendalot **daily** parent category, optionally with fixed subcategory
+- `📉 Big expense`:
+  - treat as **unplanned expense**
+  - map to:
+    - unplanned category/subcategory
+    - OR transfer (source + target account)
+    - OR correction (decreasing)
+- `📈 Big earning`:
+  - same options as big expense, but sign/direction is income/increase
+- `🔮 Prediction`:
+  - map to a prophecy template
+  - import must create corresponding instances and immediately confirm them
+
+**Import execution rules:**
+- Ignore `From bot`, `Applied`
+- Skip rows with `Delete=TRUE`
+- Use existing creation flows where possible:
+  - plain rows via transaction batch flow (same as Quick Entry path)
+  - transfers via transfer flow
+  - corrections via same balance-correction flow as Treasury
+  - predictions via instance/template flow, with immediate confirmation
+- Import targets currently selected account by default, except explicit transfer mappings which include source/target accounts.
+
+**Mapping persistence:**
+- Save mapping configuration so multiple imports can reuse mappings.
+- Nuke script must also delete mapping data.
+- Backup/restore flow must include mapping data.
+
+**Create-on-the-spot capability:**
+- During mapping, allow creating missing categories/subcategories without leaving importer.
+
+**Error handling/reporting:**
+- Before commit: show parse/mapping validation errors (invalid date/amount, unmapped keys, invalid account refs)
+- After commit: show per-row success/failure report with reason
+- No duplicate-import guard required in this task
+
+**Deliverables (planned):**
+- Backend:
+  - import/mapping persistence models + migration(s)
+  - import orchestration endpoints/services
+  - nuke script update to include importer mapping tables
+  - backup/restore script(s) including importer mapping tables
+- Frontend:
+  - Settings entry point for import
+  - import wizard UI (upload, mapping, dry-run, commit, report)
+
+**Mark complete:** `[x] 7.3 - Data migration tool (from Google Sheets)`
 
 ---
 
@@ -1902,6 +1970,7 @@ Reuse components wherever possible for design unification:
 - in "Prophecies", action buttons Edit/Delete/Pause look different than they do in Treasury, Chronicles; 
 - in Treasury, account type display (current/savings) is different from pill style as in topbar; 
 - "whisper" in Thy Lowest Fortunes dashboard block (Forecasted over the next X days) seems to be used in that single place only;
+- in Chronicles "Show deleted" is a checkbox inactive by default. In Proophecies it's a dropdown "Status" with "All" selected by default.
 - etc...
 Suggest replacements where appropriate before implementing.
 After implementing and before moving to next feature, introduce rule change that will make the agent in future defelopment prioritize reusing components intead of creating new ones.
@@ -2073,6 +2142,32 @@ A few things to start off (consider them to be discussion points rather than ord
 
 ---
 
+### Task 9.9: Optional normalized subcategory model
+
+**What:** Introduce optional `subcategory_id` linkage for transactions while preserving current free-text `subcategory` behavior for compatibility and import flexibility.
+
+**Why:** Keep quick-entry friendliness and historical import tolerance, while enabling stricter taxonomy where desired.
+
+**Scope (planned):**
+- Add dedicated subcategory entities (child categories or separate table) and add nullable `transactions.subcategory_id` FK.
+- Keep existing `transactions.subcategory` text column during transition.
+- Write path:
+  - when a known subcategory entity is selected, persist `subcategory_id` and keep mirrored text;
+  - when user types custom text, persist text and optionally auto-create/link subcategory entity based on settings.
+- Read/filter path supports both:
+  - `subcategory_id` exact matching for normalized rows,
+  - text fallback for legacy rows.
+- Migration/backfill:
+  - create subcategory entities from existing `(parent category, subcategory text)` usage;
+  - backfill `subcategory_id` where unambiguous.
+- Importer compatibility:
+  - continue accepting raw text,
+  - optionally resolve to existing/new subcategory entities.
+
+**Mark complete:** `[ ] 9.9 - Optional normalized subcategory model`
+
+---
+
 ## Phase 10: Rolling predictions
 
 **Purpose:** Improve prediction engine so that it accounts not only for predictions created as "Prophecies", but also for unplanned patterns.
@@ -2091,6 +2186,7 @@ Draft:
 - There should be a tool allowing to track patterns over 1/2/3 rolling periods and suggest creating/adjusting rolling expenses
 - For example: rolling prediction expects an average of 100 EUR per month for cat food
 - if 0 spent on cat food, it expects -100 by the end of period. If 20 spent, it expects 80 more
+- sometimes parent category (i.e. cats) can show no patterns while a subcategory (i.e. Cats -> Cat food) does. The system should account for both cases.
 - it should track shifts and suggest adjustments (example: over past three rolling periods there were on the average 70/period spent, while rolling average expects 100 - suggest adjustments) 
 - can use existing analytics methods 
 - due to many variables, there should be a tooltip in dashboard showing how the predictions were calculated
