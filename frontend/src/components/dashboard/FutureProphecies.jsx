@@ -49,7 +49,7 @@ function ProphecyRow({ instance }) {
 
   function handleExpandedConfirm() {
     const payload = { id: instance.id, create_transaction: true }
-    if (amount) payload.confirmed_amount = parseFloat(amount)
+    if (amount) payload.confirmed_amount = Math.abs(parseFloat(amount))
     if (date) payload.confirmed_date = date
     if (paymentMethodId) payload.payment_method_id = parseInt(paymentMethodId, 10)
     confirm.mutate(payload, { onSuccess: () => setExpanded(false) })
@@ -112,7 +112,7 @@ function ProphecyRow({ instance }) {
               label="Amount"
               type="number"
               step="0.01"
-              min="0"
+              min="0.01"
               value={amount}
               onChange={e => setAmount(e.target.value)}
               placeholder={formatAmount(instance.amount)}

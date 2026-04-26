@@ -72,6 +72,7 @@ export default function QuickEntryForm({
           const newRow = {
             ...createEmptyRow(defaultPaymentMethodId),
             deedType: src.deedType,
+            direction: src.direction || 'expense',
             date: src.date,
             parentCategoryId: src.parentCategoryId,
             subcategory: src.subcategory,
@@ -146,6 +147,21 @@ export default function QuickEntryForm({
     }
 
     for (const r of withAmount) {
+      const parsed = parseFloat(r.amount)
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        setRows((prev) =>
+          prev.map((row) =>
+            row.id === r.id
+              ? { ...row, submitError: 'Use a positive amount greater than zero.' }
+              : row
+          )
+        )
+        setGlobalError('Some deeds have invalid amount (must be positive).')
+        return
+      }
+    }
+
+    for (const r of withAmount) {
       if (r.kind === 'plain' && !r.parentCategoryId) {
         setRows((prev) =>
           prev.map((row) =>
@@ -194,7 +210,7 @@ export default function QuickEntryForm({
     for (const row of predictionRows) {
       const payload = {
         create_transaction: true,
-        confirmed_amount: parseFloat(row.amount),
+        confirmed_amount: Math.abs(parseFloat(row.amount)),
         confirmed_date: row.date,
       }
       if (row.paymentMethodId) {
@@ -217,9 +233,9 @@ export default function QuickEntryForm({
       try {
         await ensureSubcategories(plainRows)
         const items = plainRows.map((row) => ({
+          amount: (row.direction === 'gain' ? -1 : 1) * Math.abs(parseFloat(row.amount)),
           account_id: selectedId,
           category_id: parseInt(row.parentCategoryId, 10),
-          amount: parseFloat(row.amount),
           subcategory: row.subcategory?.trim() || null,
           description: row.description?.trim() || null,
           payment_method_id: row.paymentMethodId

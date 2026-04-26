@@ -23,6 +23,11 @@ const DEED_TYPES = [
   { value: 'unplanned', label: 'Unplanned' },
 ]
 
+const FLOW_TYPES = [
+  { value: 'expense', label: 'Expense' },
+  { value: 'gain', label: 'Gain' },
+]
+
 function categoryLabel(categories, parentCategoryId) {
   if (!parentCategoryId || !categories) return '—'
   const c = categories.find((x) => x.id === parseInt(parentCategoryId, 10))
@@ -72,7 +77,12 @@ export default function ExpenseRow({
         .filter(Boolean)
         .join(' · ')
 
-  const summaryRight = formatSigned(-Math.abs(parseFloat(row.amount) || 0))
+  const numericAmount = Math.abs(parseFloat(row.amount) || 0)
+  const signedAmount = isPrediction
+    ? -numericAmount
+    : (row.direction === 'gain' ? numericAmount : -numericAmount)
+  const summaryRight = formatSigned(signedAmount)
+  const summaryRightClass = signedAmount > 0 ? 'text-success' : 'text-danger'
   const pm = paymentLabel(paymentMethods, row.paymentMethodId)
 
   const deedTypeKey = isPrediction ? 'predicted' : row.deedType
@@ -102,7 +112,7 @@ export default function ExpenseRow({
         </div>
         <div className="flex items-start gap-2 shrink-0">
           <div className="flex flex-col items-end gap-1">
-            <span className="text-sm font-bold text-danger tabular-nums">{summaryRight}</span>
+            <span className={`text-sm font-bold tabular-nums ${summaryRightClass}`}>{summaryRight}</span>
             <Badge variant={TYPE_BADGE_VARIANT[deedTypeKey] ?? 'muted'}>
               {TYPE_LABELS[deedTypeKey] ?? row.deedType}
             </Badge>
@@ -182,31 +192,16 @@ export default function ExpenseRow({
               </button>
             ))}
           </div>
+          <Input
+            label="Date"
+            type="date"
+            max={todayStr()}
+            value={row.date}
+            disabled={disabled}
+            onChange={(e) => onUpdate(row.id, { date: e.target.value })}
+          />
         </div>
       )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input
-          id={`qe-amount-${row.id}`}
-          label="Amount"
-          type="number"
-          inputMode="decimal"
-          step="0.01"
-          min="0"
-          placeholder="0.00"
-          value={row.amount}
-          disabled={disabled}
-          onChange={(e) => onUpdate(row.id, { amount: e.target.value, submitError: null })}
-        />
-        <Input
-          label="Date"
-          type="date"
-          max={todayStr()}
-          value={row.date}
-          disabled={disabled}
-          onChange={(e) => onUpdate(row.id, { date: e.target.value })}
-        />
-      </div>
 
       {!isPrediction && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -239,6 +234,67 @@ export default function ExpenseRow({
             </datalist>
           </div>
         </div>
+      )}
+
+      {!isPrediction && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <Input
+              id={`qe-amount-${row.id}`}
+              label="Amount"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0.01"
+              placeholder="0.00"
+              value={row.amount}
+              disabled={disabled}
+              onChange={(e) => onUpdate(row.id, { amount: e.target.value, submitError: null })}
+            />
+            <div className="mt-1 inline-flex rounded-md border border-gold/20 bg-black/20 p-0.5">
+              {FLOW_TYPES.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onUpdate(row.id, { direction: value })}
+                  className={[
+                    'px-1.5 py-0.5 text-[11px] font-semibold rounded transition-colors border border-transparent',
+                    row.direction === value
+                      ? 'bg-gold/20 text-gold border-gold/30'
+                      : 'text-gold-muted hover:text-gold hover:border-gold/20',
+                  ].join(' ')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <Select
+            label="Payment method"
+            value={row.paymentMethodId}
+            disabled={disabled}
+            onChange={(e) => onUpdate(row.id, { paymentMethodId: e.target.value })}
+          >
+            <option value="">— None —</option>
+            {(paymentMethods ?? []).map((pm) => (
+              <option key={pm.id} value={String(pm.id)}>
+                {pm.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
+
+      {isPrediction && (
+        <Input
+          label="Date"
+          type="date"
+          max={todayStr()}
+          value={row.date}
+          disabled={disabled}
+          onChange={(e) => onUpdate(row.id, { date: e.target.value })}
+        />
       )}
 
       {isPrediction && (
@@ -274,19 +330,6 @@ export default function ExpenseRow({
 
           {showDetails && (
             <div className="mt-3 space-y-4">
-              <Select
-                label="Payment method"
-                value={row.paymentMethodId}
-                disabled={disabled}
-                onChange={(e) => onUpdate(row.id, { paymentMethodId: e.target.value })}
-              >
-                <option value="">— None —</option>
-                {(paymentMethods ?? []).map((pm) => (
-                  <option key={pm.id} value={String(pm.id)}>
-                    {pm.name}
-                  </option>
-                ))}
-              </Select>
               <Textarea
                 label="Description"
                 placeholder="Thy notes on this deed..."

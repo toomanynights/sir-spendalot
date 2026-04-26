@@ -17,6 +17,11 @@ const DEED_TYPES = [
   { value: 'unplanned', label: 'Unplanned' },
 ]
 
+const FLOW_TYPES = [
+  { value: 'expense', label: 'Expense' },
+  { value: 'gain', label: 'Gain' },
+]
+
 const today = () => new Date().toISOString().split('T')[0]
 
 export default function RecordDeed() {
@@ -28,6 +33,7 @@ export default function RecordDeed() {
   const createTransaction = useCreateTransaction()
 
   const [deedType, setDeedType]               = useState('daily')
+  const [flowType, setFlowType]               = useState('expense')
   const [amount, setAmount]                   = useState('')
   const [parentCategoryId, setParentCategoryId] = useState('')
   const [subcategory, setSubcategory]         = useState('')
@@ -79,6 +85,11 @@ export default function RecordDeed() {
       setError('Hark! Thou must provide an amount and a category.')
       return
     }
+    const parsedAmount = parseFloat(amount)
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setError('Hark! Use a positive amount greater than zero.')
+      return
+    }
 
     if (deedType === 'daily' || deedType === 'unplanned') {
       if (settings?.require_payment_method && !paymentMethodId) {
@@ -113,7 +124,7 @@ export default function RecordDeed() {
       await createTransaction.mutateAsync({
         account_id: selectedId,
         category_id: categoryId,
-        amount: parseFloat(amount),
+        amount: flowType === 'gain' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount),
         subcategory: subcategory.trim() || null,
         payment_method_id: paymentMethodId ? parseInt(paymentMethodId) : null,
         description: description || null,
@@ -123,6 +134,7 @@ export default function RecordDeed() {
       })
 
       setAmount('')
+      setFlowType('expense')
       setParentCategoryId('')
       setSubcategory('')
       setPaymentMethodId(
@@ -165,29 +177,6 @@ export default function RecordDeed() {
             </div>
           </div>
 
-          {/* Amount & Payment Method */}
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Amount"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
-            <Select
-              label="Payment Method"
-              value={paymentMethodId}
-              onChange={(e) => setPaymentMethodId(e.target.value)}
-            >
-              <option value="">Select Method</option>
-              {paymentMethods?.map((pm) => (
-                <option key={pm.id} value={pm.id}>{pm.name}</option>
-              ))}
-            </Select>
-          </div>
-
           {/* Category & Subcategory */}
           <div className="grid grid-cols-2 gap-4">
             <Select
@@ -217,6 +206,49 @@ export default function RecordDeed() {
                 ))}
               </datalist>
             </div>
+          </div>
+
+          {/* Amount & Payment Method */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Input
+                label="Amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+              />
+              <div className="mt-1 inline-flex rounded-md border border-gold/20 bg-black/20 p-0.5">
+                {FLOW_TYPES.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setFlowType(value)}
+                    className={[
+                      'px-1.5 py-0.5 text-[11px] font-semibold rounded transition-colors border border-transparent',
+                      flowType === value
+                        ? 'bg-gold/20 text-gold border-gold/30'
+                        : 'text-gold-muted hover:text-gold hover:border-gold/20',
+                    ].join(' ')}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Select
+              label="Payment Method"
+              value={paymentMethodId}
+              onChange={(e) => setPaymentMethodId(e.target.value)}
+            >
+              <option value="">Select Method</option>
+              {paymentMethods?.map((pm) => (
+                <option key={pm.id} value={pm.id}>{pm.name}</option>
+              ))}
+            </Select>
           </div>
 
           {/* Collapsible: Date & Description */}
