@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html
 
 from app.api import (
     accounts,
@@ -42,6 +43,9 @@ app = FastAPI(
     description="Thy finances, foretold!",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/api/docs",
+    redoc_url=None,
+    openapi_url="/api/openapi.json",
 )
 
 app.add_middleware(
@@ -63,6 +67,15 @@ app.include_router(settings_api.router)
 app.include_router(excluded_days.router)
 app.include_router(transfers.router)
 app.include_router(importer.router)
+
+
+@app.get("/api/redoc", include_in_schema=False)
+async def redoc_html():
+    return get_redoc_html(
+        openapi_url=app.openapi_url,
+        title=f"{app.title} - ReDoc",
+        redoc_js_url="https://cdn.jsdelivr.net/npm/redoc@2/bundles/redoc.standalone.js",
+    )
 
 
 @app.get("/api/health")
