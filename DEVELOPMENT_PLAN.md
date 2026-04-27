@@ -88,7 +88,7 @@
 - [ ] 9.3 - Edit / soft-delete in “Recent Chronicles” dashboard block (deferred from Phase 7.6)
 - [ ] 9.4 - Add "past instances" to Prophecies (needs design work)
 - [ ] 9.5 - Analytics overhaul
-- [ ] 9.6 - add an optional line on top of "Thy Lowest Fortunes" block, showing the date when the account will go below zero (if present)
+- [x] 9.6 - add an optional line on top of "Thy Lowest Fortunes" block, showing the date when the account will go below zero (if present)
 - [ ] 9.7 - make "Show predictive features on non-primary accounts" setting actualy work (dashboard + analytics with the same logic as in dashboard)
 - [ ] 9.8 - Implement PWA support
 - [ ] 9.9 - Optional normalized subcategory model (`subcategory_id`) with backward-compatible text fallback
@@ -2160,6 +2160,23 @@ A few things to start off (consider them to be discussion points rather than ord
 
 
 **Mark complete:** `[ ] 9.5 -  Analytics overhaul`
+
+---
+
+### Task 9.6: Sub-zero date line in Thy Lowest Fortunes
+
+**What:** Add an optional status line at the top of `Thy Lowest Fortunes` indicating when balance first falls below zero.
+
+**Specs:**
+- Use existing forecast data (no backend/API changes).
+- Behavior:
+  - if current actual balance is already below zero, show: `The treasury is sub-zero, m'lord.`
+  - else if forecast crosses below zero within horizon, show date of first crossing.
+  - else show nothing (line hidden).
+- Scope:
+  - applies to primary-account `Thy Lowest Fortunes` card only (same visibility rules as existing card).
+
+**Mark complete:** `[x] 9.6 - add an optional line on top of "Thy Lowest Fortunes" block, showing the date when the account will go below zero (if present)`
 
 ---
 

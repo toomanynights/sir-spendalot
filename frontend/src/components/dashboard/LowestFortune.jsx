@@ -1,5 +1,5 @@
 import { AlertCircle, TrendingDown, Calendar } from 'lucide-react'
-import { useLowestPoints } from '../../hooks/usePredictions'
+import { useForecast, useLowestPoints } from '../../hooks/usePredictions'
 import { useSettings } from '../../hooks/useSettings'
 import { useSelectedAccount } from '../../contexts/AccountContext'
 import { Card, CardHeader, CardBody } from '../ui/Card'
@@ -11,6 +11,7 @@ export default function LowestFortune() {
   const { data: settings } = useSettings()
   const horizonDays = settings?.prediction_horizon_days ?? 90
   const { data: lowestPoints, isLoading, error } = useLowestPoints(2, selectedId)
+  const { data: forecast } = useForecast(horizonDays, selectedId)
 
   // Only show "Lowest Fortunes" (perils) on primary accounts by default.
   // Savings/Non-primary accounts often have low churn, making these predictions
@@ -45,11 +46,32 @@ export default function LowestFortune() {
 
   // FIX: The backend returns { account_id, perils: [...] }
   const points = lowestPoints?.perils || []
+  const isAlreadySubZero = Number.parseFloat(forecast?.actual_balance) < 0
+  const firstBelowZero = forecast?.forecast?.find(
+    (row) => Number.parseFloat(row.predicted_balance) < 0
+  )
 
   return (
     <Card shimmer>
       <CardHeader icon={<TrendingDown size={20} />} title="Thy Lowest Fortunes" />
       <CardBody>
+        {isAlreadySubZero ? (
+          <div className="mb-4 rounded-md border border-danger/30 bg-danger/10 px-3 py-2">
+            <p className="text-sm font-semibold text-danger">
+              The treasury is sub-zero, m&apos;lord.
+            </p>
+          </div>
+        ) : firstBelowZero ? (
+          <div className="mb-4 rounded-md border border-danger/30 bg-danger/10 px-3 py-2">
+            <p className="text-xs uppercase tracking-wide text-danger/80">
+              Falls below zero
+            </p>
+            <p className="text-sm font-semibold text-danger">
+              {formatRelativeDate(firstBelowZero.date)}
+            </p>
+          </div>
+        ) : null}
+
         {points.length === 0 ? (
           <p className="text-gold-muted/50 text-sm font-crimson italic py-4 text-center">
             No perils detected in the coming {horizonDays} days.
