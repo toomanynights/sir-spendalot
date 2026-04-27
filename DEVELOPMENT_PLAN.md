@@ -76,10 +76,10 @@
 - [ ] 7.12 - In topbar, add optional attention dot in case account hasn't been checked up within specified period; if it has unconfirmed today/past prophecies
 
 ### Phase 8: Deployment (some may already be implemented - check) ✅ / ❌
-- [ ] 8.1 - Systemd services
-- [ ] 8.2 - Caddy reverse proxy
-- [ ] 8.3 - Production environment configuration
-- [ ] 8.4 - Backup automation (performed by user)
+- [x] 8.1 - Systemd services
+- [x] 8.2 - Caddy reverse proxy
+- [x] 8.3 - Production environment configuration
+- [x] 8.4 - Backup automation (performed by user)
 - [x] 8.5 - Prepare & upload to git
 
 ### Phase 9: Post-release improvements ✅ / ❌
