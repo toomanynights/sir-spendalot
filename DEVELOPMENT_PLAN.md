@@ -97,6 +97,7 @@
 - [x] 9.12 - Treasury layout: introduce scrollong when >5 items
 - [ ] 9.13 - Column layout is not pretty, especially when one of the cards is too tall
 - [ ] 9.14 - allow rescheduling an instance, avoiding its regeneration despite changed date
+- [ ] 9.15 - Google Calendar integration
 
 ### Phase 10: Rolling predictions ✅ / ❌
 - [ ] 10.0 - Feature initiation (see specs)
