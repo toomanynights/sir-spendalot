@@ -72,7 +72,7 @@
 - [x] 7.8 - Explicit income/expense control in Record Thy Deed, Quick entry (and add default type to categories). 
 - [ ] 7.9 - Components reuse
 - [x] 7.10 - Browser notifications for predictions about to go overdue / already overdue (with setting: on/off + time)
-- [ ] 7.11 - Per-account checkup vs. actual balance (in This Day's Fortune: add buttons on the right from the sum to correct/transfer/checkup; checkup button in treasury; make accounts expandable with the list of checkups. Checkup is a form with current balance and a separate field for each payment method; sum of those fields = corrected balance, can use regular correction method. in This Day's Fortune add alert if account not checked up within customizeable period. In Settings add checkup notification period.)
+- [ ] 7.11 - Per-account checkup vs. actual balance
 - [ ] 7.12 - In topbar, add optional attention dot in case account hasn't been checked up within specified period; if it has unconfirmed today/past prophecies
 
 ### Phase 8: Deployment (some may already be implemented - check) ✅ / ❌
@@ -93,6 +93,10 @@
 - [ ] 9.8 - Implement PWA support
 - [ ] 9.9 - Optional normalized subcategory model (`subcategory_id`) with backward-compatible text fallback
 - [x] 9.10 - Color-code (expenses vs earnings) "Future Prophecies" block (Dashboard) + Prophecies Awaiting (Quick entry)
+- [ ] 9.11 - Category management (reassign/remove subcategory parent; allow renaming subcategories; change subcategory text in transactions when subcategory is renamed...)
+- [ ] 9.12 - Treasury layout: introduce scrollong when >5 items
+- [ ] 9.13 - Column layout is not pretty, especially when one of the cards is too tall
+- [ ] 9.14 - allow rescheduling an instance, avoiding its regeneration despite changed date
 
 ### Phase 10: Rolling predictions ✅ / ❌
 - [ ] 10.0 - Feature initiation (see specs)
@@ -1999,6 +2003,22 @@ After implementing and before moving to next feature, introduce rule change that
 **Mark complete:** `[x] 7.10 - Browser notifications for predictions about to go overdue / already overdue (with setting: on/off + time)`
 
 ---
+
+### Task 7.11: Per-account checkup vs. actual balance
+
+**Specs (draft):**
+ - in This Day's Fortune: add buttons on the right from the sum to correct/transfer/checkup
+ - in Treasury: checkup button; 
+ - in Treasury: make accounts expandable with the list of checkups. 
+
+Checkup is a form with current balance and a separate field for each payment method; sum of those fields = corrected balance, show it pre-commit with a helping tooltip exxplaining what does the difference mean; can use regular correction method to submit. in This Day's Fortune add alert if account not checked up within customizeable period. In Settings add checkup notification period.
+
+
+**Mark complete:** `[x] 7.11 - Per-account checkup vs. actual balance
+
+---
+
+
 
 ## Phase 8: Deployment
 
