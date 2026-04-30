@@ -98,6 +98,7 @@
 - [ ] 9.13 - Column layout is not pretty, especially when one of the cards is too tall
 - [ ] 9.14 - allow rescheduling an instance, avoiding its regeneration despite changed date
 - [ ] 9.15 - Google Calendar integration
+- [ ] 9.16 - Problem: subcategory dropdown contains repetitions. (Don't just post-filter to unique - we need to figure out why that happens)
 
 ### Phase 10: Rolling predictions ✅ / ❌
 - [ ] 10.0 - Feature initiation (see specs)
