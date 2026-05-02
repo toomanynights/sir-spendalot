@@ -57,6 +57,9 @@ export default function TodayFortune() {
 
   const actual = parseFloat(stats.actual_balance)
   const predicted = parseFloat(stats.predicted_balance)
+  const overdueDebt = parseFloat(stats.overdue_pending_debt ?? 0)
+  const flexibleDaily = parseFloat(stats.flexible_daily ?? 0)
+  const todayPending = parseFloat(stats.today_pending_total ?? 0)
   const rollingAvg = parseFloat(stats.rolling_avg_daily_spend)
   const { daily, unplanned, predicted: predictedSpend } = stats.spending_today
   const totalOutgoings = parseFloat(daily) + parseFloat(unplanned) + parseFloat(predictedSpend)
@@ -127,6 +130,12 @@ export default function TodayFortune() {
             <div className="mb-5">
               <p className="stat-label">End-of-Day Forecast</p>
               <p className={predictedClass}>{formatSigned(predicted)}</p>
+              <ForecastBreakdown
+                balance={actual}
+                overdueDebt={overdueDebt}
+                flexibleDaily={flexibleDaily}
+                todayPending={todayPending}
+              />
             </div>
           )}
 
@@ -222,6 +231,45 @@ function expenseAmountClass(num, rollingAvg, highMult, lowMult) {
     return 'text-gold'
   }
   return 'text-danger'
+}
+
+function ForecastBreakdown({ balance, overdueDebt, flexibleDaily, todayPending }) {
+  const parts = []
+
+  parts.push(
+    <span key="balance" className="text-gold-muted/60">
+      {formatAmount(Math.abs(balance))}
+    </span>
+  )
+
+  if (overdueDebt > 0) {
+    parts.push(
+      <span key="sep-overdue" className="text-gold-muted/30 mx-0.5">−</span>,
+      <span key="overdue" className="text-amber-400/70">{formatAmount(overdueDebt)} overdue</span>
+    )
+  }
+
+  if (flexibleDaily > 0) {
+    parts.push(
+      <span key="sep-daily" className="text-gold-muted/30 mx-0.5">−</span>,
+      <span key="daily" className="text-gold-muted/50">{formatAmount(flexibleDaily)} daily est.</span>
+    )
+  }
+
+  if (todayPending > 0) {
+    parts.push(
+      <span key="sep-sched" className="text-gold-muted/30 mx-0.5">−</span>,
+      <span key="sched" className="text-gold-muted/50">{formatAmount(todayPending)} scheduled</span>
+    )
+  }
+
+  if (parts.length <= 1) return null
+
+  return (
+    <p className="mt-1 text-[10px] leading-tight tracking-wide font-crimson italic flex flex-wrap items-baseline gap-y-0.5">
+      {parts}
+    </p>
+  )
 }
 
 function SpendingCell({ label, value, rollingAvg, highMult, lowMult }) {

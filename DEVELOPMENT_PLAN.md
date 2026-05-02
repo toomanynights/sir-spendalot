@@ -1979,6 +1979,7 @@ Reuse components wherever possible for design unification:
 - in Treasury, account type display (current/savings) is different from pill style as in topbar; 
 - "whisper" in Thy Lowest Fortunes dashboard block (Forecasted over the next X days) seems to be used in that single place only;
 - in Chronicles "Show deleted" is a checkbox inactive by default. In Proophecies it's a dropdown "Status" with "All" selected by default.
+- in Treasury expanding lines in Accounts and Categories look differently
 - etc...
 Suggest replacements where appropriate before implementing.
 After implementing and before moving to next feature, introduce rule change that will make the agent in future defelopment prioritize reusing components intead of creating new ones.

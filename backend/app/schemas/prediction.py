@@ -123,6 +123,14 @@ class ForecastResponse(BaseModel):
     actual_balance: Decimal
     # Rolling average of daily-type spending (positive = net expense drain per day)
     rolling_avg_daily_spend: Decimal
+    # Sum of pending prediction instances whose scheduled_date is before today.
+    # These represent "ghost debt" — expected expenses that were never confirmed or skipped.
+    # The forecast starting balance is actual_balance − overdue_pending_debt.
+    overdue_pending_debt: Decimal = Decimal("0")
+    # Remaining expected daily spend for today: max(0, rolling_avg − daily_spent_today)
+    flexible_daily: Decimal = Decimal("0")
+    # Sum of pending prediction instances scheduled for today
+    today_pending_total: Decimal = Decimal("0")
     # Starts from today (day 0 = today's forecast), then day 1..N projected
     forecast: list[ForecastDayResponse]
 

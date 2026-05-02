@@ -77,6 +77,20 @@ def _get_actual_balance(db: Session, account: Account, today: date) -> Decimal:
     return account.initial_balance - Decimal(str(total))
 
 
+def _get_overdue_pending_debt(db: Session, account_id: int, today: date) -> Decimal:
+    """
+    Sum of pending prediction instances scheduled before today that were never confirmed
+    or skipped. These represent expenses expected to have occurred but not yet recorded —
+    "ghost debt" that must be deducted from the forecast starting balance.
+    """
+    total = db.query(func.coalesce(func.sum(PredictionInstance.amount), 0)).filter(
+        PredictionInstance.account_id == account_id,
+        PredictionInstance.scheduled_date < today,
+        PredictionInstance.status == "pending",
+    ).scalar()
+    return Decimal(str(total))
+
+
 def _calculate_rolling_average(
     db: Session,
     account_id: int,
@@ -119,18 +133,23 @@ def _build_forecast(
     horizon_days: int,
     rolling_avg: Decimal,
     actual_balance: Decimal,
-) -> list[ForecastDayResponse]:
+    overdue_debt: Decimal,
+) -> tuple[list[ForecastDayResponse], Decimal, Decimal]:
     """
     Build the forecast array starting from today.
 
     Today (day 0):
       predicted_balance = actual_balance
+                        − overdue_debt          (past-day pending instances never resolved)
                         − pending prediction instances for today
                         − flexible_daily
       where flexible_daily = max(0, rolling_avg − daily_type_spent_today)
 
     Days 1..N:
       balance = prev_balance − rolling_avg − sum(pending instances for that day)
+
+    Returns:
+      (forecast, flexible_daily, today_pending_total)
     """
     today = date.today()
 
@@ -161,11 +180,11 @@ def _build_forecast(
         instances_by_date.setdefault(inst.scheduled_date, []).append(inst)
 
     # ── Day 0: today ──────────────────────────────────────────────────
-    today_instance_total = sum(
+    today_pending_total = sum(
         (inst.amount for inst in instances_by_date.get(today, [])),
         Decimal("0"),
     )
-    today_forecast_balance = actual_balance - flexible_daily - today_instance_total
+    today_forecast_balance = actual_balance - overdue_debt - flexible_daily - today_pending_total
 
     forecast = [ForecastDayResponse(date=today, predicted_balance=today_forecast_balance)]
     balance = today_forecast_balance
@@ -178,7 +197,7 @@ def _build_forecast(
             balance -= inst.amount
         forecast.append(ForecastDayResponse(date=day, predicted_balance=balance))
 
-    return forecast
+    return forecast, flexible_daily, today_pending_total
 
 
 def _find_perils(forecast: list[ForecastDayResponse], count: int) -> list[PerilResponse]:
@@ -217,15 +236,21 @@ def get_forecast(
     today = date.today()
 
     actual_balance = _get_actual_balance(db, account, today)
+    overdue_debt = _get_overdue_pending_debt(db, account.id, today)
     rolling_avg = _calculate_rolling_average(
         db, account.id, settings.rolling_average_days, today, excluded
     )
-    forecast = _build_forecast(db, account, horizon, rolling_avg, actual_balance)
+    forecast, flexible_daily, today_pending_total = _build_forecast(
+        db, account, horizon, rolling_avg, actual_balance, overdue_debt
+    )
 
     return ForecastResponse(
         account_id=account.id,
         actual_balance=actual_balance,
         rolling_avg_daily_spend=rolling_avg,
+        overdue_pending_debt=overdue_debt,
+        flexible_daily=flexible_daily,
+        today_pending_total=today_pending_total,
         forecast=forecast,
     )
 

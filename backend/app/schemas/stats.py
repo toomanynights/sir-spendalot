@@ -15,6 +15,12 @@ class TodayStatsResponse(BaseModel):
     account_id: int
     actual_balance: Decimal
     predicted_balance: Decimal
+    # Sum of pending prediction instances scheduled before today (unresolved ghost debt).
+    overdue_pending_debt: Decimal = Decimal("0")
+    # Remaining expected daily spend for today: max(0, rolling_avg − daily_spent_today)
+    flexible_daily: Decimal = Decimal("0")
+    # Sum of pending prediction instances scheduled for today
+    today_pending_total: Decimal = Decimal("0")
     spending_today: SpendingTodayResponse
     today_excluded: bool
     rolling_avg_daily_spend: Decimal
