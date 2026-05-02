@@ -4,6 +4,7 @@ import { Input, Select, Textarea } from '../ui/Input'
 import { Badge } from '../ui/Badge'
 import { formatDate, formatRelativeDate, formatSigned } from '../../utils/format'
 import { todayStr, canCollapseRow } from './rowUtils'
+import SubcategorySuggestions from '../ui/SubcategorySuggestions'
 
 /** Match Recent Chronicles transaction type pills */
 const TYPE_LABELS = {
@@ -219,20 +220,15 @@ export default function ExpenseRow({
             ))}
           </Select>
           <div>
-            <Input
-              label="Subcategory"
-              list={`sub-${row.id}`}
-              placeholder={row.parentCategoryId ? 'Select or type new…' : 'Pick a category first'}
-              value={row.subcategory}
-              disabled={disabled || !row.parentCategoryId}
-              onChange={(e) => onUpdate(row.id, { subcategory: e.target.value })}
-            />
-            <datalist id={`sub-${row.id}`}>
-              {childCategories.map((c) => (
-                <option key={c.id} value={c.name} />
-              ))}
-            </datalist>
-          </div>
+              <SubcategorySuggestions
+                label="Subcategory"
+                placeholder={row.parentCategoryId ? 'Select or type new…' : 'Pick a category first'}
+                value={row.subcategory}
+                onChange={(val) => onUpdate(row.id, { subcategory: val })}
+                suggestions={childCategories.map((c) => c.name)}
+                disabled={disabled || !row.parentCategoryId}
+              />
+            </div>
         </div>
       )}
 

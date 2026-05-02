@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Menu, Coins } from 'lucide-react'
 import Sidebar from './Sidebar'
@@ -7,6 +7,18 @@ import DisplayFormatSync from './DisplayFormatSync'
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  // Collapse only applies on desktop. On mobile, the sidebar slides in fully.
+  const effectiveCollapsed = !isMobile && sidebarCollapsed
 
   return (
     <div className="app-shell">
@@ -17,11 +29,11 @@ export default function Layout() {
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        collapsed={sidebarCollapsed}
+        collapsed={effectiveCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
       />
 
-      <div className={`main-content flex flex-col ${sidebarCollapsed ? 'main-content-collapsed' : ''}`}>
+      <div className={`main-content flex flex-col ${effectiveCollapsed ? 'main-content-collapsed' : ''}`}>
         <DisplayFormatSync />
         {/* Mobile top bar */}
         <header className="topbar">
@@ -32,14 +44,12 @@ export default function Layout() {
           >
             <Menu size={22} />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="topbar-title">
             <Coins size={20} className="text-gold" />
             <span className="text-gold font-bold tracking-wide text-sm font-cinzel">
               Sir Spendalot
             </span>
           </div>
-          {/* Spacer to centre the title */}
-          <div className="w-10" />
         </header>
 
         {/* Page content */}

@@ -98,7 +98,7 @@ export default function AccountSwitcher() {
   if (accounts.length === 0) return null
 
   return (
-    <div className="flex flex-wrap gap-2 mb-6" role="tablist" aria-label="Account switcher">
+    <div className="account-switcher-scroll" role="tablist" aria-label="Account switcher">
       {sorted.map((account) => {
         const isActive = account.id === selectedId
         const isSavings = account.account_type === 'savings'

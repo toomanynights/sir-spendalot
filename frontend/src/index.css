@@ -14,6 +14,10 @@
     min-height: 100vh;
   }
 
+  body, #root {
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-medieval font-cinzel text-parchment;
     background-attachment: fixed;
@@ -45,7 +49,7 @@
   .bg-glow-right {
     position: fixed;
     top: 10%;
-    right: -5%;
+    right: 0;
     width: 400px;
     height: 400px;
     background: radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%);
@@ -249,10 +253,6 @@
   /* ----------------------------------------------------------
      Page layout
      ---------------------------------------------------------- */
-  .page-container {
-    @apply relative z-10 max-w-7xl px-6 py-8;
-  }
-
   .grid-dashboard {
     @apply grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 items-start;
   }
@@ -475,6 +475,8 @@
   .main-content {
     @apply flex-1 min-h-screen;
     margin-left: 17rem;
+    overflow-x: clip;
+    min-width: 0; /* allow flex child to shrink below content size, so child overflow-x: auto can engage */
   }
 
   .main-content-collapsed {
@@ -484,14 +486,94 @@
   /* Mobile top bar (visible < md) */
   .topbar {
     @apply flex items-center justify-between px-4 py-3 sticky top-0 z-30 md:hidden;
+    position: sticky; /* ensure relative context for absolute title */
     background: rgba(26,15,10,0.95);
     border-bottom: 1px solid rgba(212,175,55,0.20);
     backdrop-filter: blur(8px);
   }
 
+  /* Absolutely-centred app title inside the mobile topbar */
+  .topbar-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    pointer-events: none; /* let clicks pass through to buttons behind it */
+  }
+
   /* Sidebar overlay on mobile */
   .sidebar-overlay {
     @apply fixed inset-0 bg-black/60 z-30 md:hidden;
+  }
+
+  /* Account switcher — single scrollable row on mobile, wraps on md+ */
+  .account-switcher-scroll {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    width: 100%; /* constrain to parent so overflow-x actually scrolls */
+    min-width: 0;
+    /* hide scrollbar visually while keeping it functional */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+
+  .account-switcher-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Prevent buttons inside the switcher from shrinking below their content size */
+  .account-switcher-scroll > * {
+    flex-shrink: 0;
+  }
+
+  @media (min-width: 768px) {
+    .account-switcher-scroll {
+      flex-wrap: wrap;
+      overflow-x: visible;
+    }
+  }
+
+  /* Subcategory custom suggestion dropdown */
+  .subcategory-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    margin-top: 2px;
+    list-style: none;
+    padding: 0.25rem 0;
+    margin-left: 0;
+    margin-right: 0;
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 0.375rem;
+    background: linear-gradient(135deg, #1a0f0a 0%, #2d1810 100%);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    max-height: 12rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 175, 55, 0.3) transparent;
+  }
+
+  .subcategory-dropdown-item {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-family: 'Cinzel', serif;
+    color: rgba(244, 228, 193, 0.80);
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+    user-select: none;
+  }
+
+  .subcategory-dropdown-item:hover,
+  .subcategory-dropdown-item-active {
+    background: rgba(212, 175, 55, 0.15);
+    color: #d4af37;
   }
 
   /* Page inner padding */
@@ -501,6 +583,7 @@
 
   .page-container {
     @apply relative z-10 max-w-7xl px-4 md:px-8 py-6 md:py-8;
+    width: 100%;
   }
 
   .page-title {

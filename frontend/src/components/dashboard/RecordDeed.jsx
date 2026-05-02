@@ -11,6 +11,7 @@ import { useSelectedAccount } from '../../contexts/AccountContext'
 import { Card, CardHeader, CardBody } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input, Select } from '../ui/Input'
+import SubcategorySuggestions from '../ui/SubcategorySuggestions'
 
 const DEED_TYPES = [
   { value: 'daily',     label: 'Daily' },
@@ -192,19 +193,14 @@ export default function RecordDeed() {
             </Select>
 
             <div>
-              <Input
+              <SubcategorySuggestions
                 label="Subcategory"
-                list="subcategories-list"
                 placeholder={parentCategoryId ? 'Select or type new…' : 'Pick a category first'}
                 value={subcategory}
-                onChange={(e) => setSubcategory(e.target.value)}
+                onChange={(val) => setSubcategory(val)}
+                suggestions={childCategories.map((c) => c.name)}
                 disabled={!parentCategoryId}
               />
-              <datalist id="subcategories-list">
-                {childCategories.map((c) => (
-                  <option key={c.id} value={c.name} />
-                ))}
-              </datalist>
             </div>
           </div>
 

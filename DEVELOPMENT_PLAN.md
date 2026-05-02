@@ -104,7 +104,7 @@
 - [ ] 10.0 - Feature initiation (see specs)
 
 ### Phase 11: Mobile layout (note: for every page, analyze if it's possible/worthwhile to transition the page into responsive design, or alternatives preferrable - hide the whole page/parts of content/suggest using desktop/customized mobile view... Some pages/elements already adapted to mobile - "no change needed" is also a valid answer) ✅ / ❌
-- [ ] 11.1 - General components (sidear, topbar, general page content) - make sure accounts in topbar are one line and draggable on mobile; pay attention to subcategory suggestions on both dashboard and quick entry (don't seem to work on mobile now)
+- [x] 11.1 - General components (sidear, topbar, general page content) - make sure accounts in topbar are one line and slide-able on mobile; pay attention to subcategory suggestions on both dashboard and quick entry (don't seem to work on mobile now)
 - [ ] 11.2 - Dashboard page  (make sure the order of cards is the same on mobile as left-to-right on desktop), floating assistant (make sure a tap on activated assistant deactivates it; also it feels a bit intrusive on mobile now)
 - [ ] 11.3 - Quick Entry page
 - [ ] 11.4 - Chronicles page
@@ -2396,6 +2396,63 @@ Study the codebase, suggest technical solution, UI placement, UI/UX, etc. Plan t
 DOD: feature is locked, described in specs, plan updated.
 
 **Mark complete:** `[ ] 10.0 - Feature initiation (see specs)`
+
+---
+
+## Phase 11: Mobile layout
+
+**Purpose:** Audit every page and general component for mobile usability. The goal is not to blindly "mobilise" everything — for some pages/elements the right call is a custom mobile view, hiding non-essential content, or simply noting "no change needed". Each task should start with a brief analysis of whether a full responsive treatment is worthwhile.
+
+---
+
+### Task 11.1: General components (sidebar, topbar, account switcher, subcategory suggestions)
+
+**Analysis:**
+- **Sidebar + mobile topbar** — Already functional: hamburger button in topbar opens a slide-in sidebar with overlay. No changes needed to the fundamental sidebar/topbar behaviour.
+- **AccountSwitcher** — Currently uses `flex flex-wrap` which causes account buttons to wrap onto multiple lines when there are more than 2–3 accounts. On mobile the topbar/header real estate is limited; a single horizontally-scrollable row is the right pattern.
+- **Subcategory suggestions (RecordDeed + ExpenseRow)** — Both use HTML `<datalist>`. Behaviour on iOS Safari and many Android browsers is unreliable: the picker may not appear, may show in an OS-native sheet that obscures the form, or may not filter correctly. Needs a custom suggestion dropdown instead.
+
+**Scope:**
+
+1. **AccountSwitcher — horizontal scroll on mobile**
+   - Remove `flex-wrap` at mobile breakpoints; replace with a single-line horizontally-scrollable container.
+   - Hide the scrollbar visually (`::-webkit-scrollbar { display: none }`) while keeping scroll functionality.
+   - Keep `flex-wrap` behaviour on larger screens (≥ md) where wrapping is fine.
+   - Savings badge (`hidden sm:inline-block`) behaviour unchanged.
+
+2. **Subcategory suggestions — custom dropdown**
+   - Extract a reusable `SubcategorySuggestions` component (or an inline pattern usable inside existing components) that renders a floating list of matching suggestions below the input field.
+   - Suggestions are filtered client-side from the existing subcategory list as the user types (same data source as before).
+   - Keyboard navigation: ArrowDown/ArrowUp move highlight; Enter selects; Escape closes.
+   - Touch-friendly: tapping a suggestion selects it and closes the list.
+   - Dismiss on outside click / blur (with a small delay to allow tap selection).
+   - Styled with the medieval theme (dark bg, gold border, gold highlight on hover/focus).
+   - Apply to both `RecordDeed.jsx` (dashboard) and `ExpenseRow.jsx` (Quick Entry).
+   - Remove the `<datalist>` elements from both components.
+   - The component should be placed in `frontend/src/components/ui/SubcategorySuggestions.jsx` for reuse in later tasks.
+
+3. **Topbar title centering (minor cleanup)**
+   - The current layout uses a rigid `<div className="w-10" />` spacer to fake-center the app title in the mobile topbar. This is fragile — if anything is ever added to the right side it breaks.
+   - Replace with CSS `position: absolute` centering for the title (or `flex + flex-1` on both side areas) so it remains truly centered regardless.
+
+**Files to create/modify:**
+- `frontend/src/components/ui/SubcategorySuggestions.jsx` — new reusable component
+- `frontend/src/components/AccountSwitcher.jsx` — horizontal scroll on mobile
+- `frontend/src/components/dashboard/RecordDeed.jsx` — use SubcategorySuggestions
+- `frontend/src/components/quick-entry/ExpenseRow.jsx` — use SubcategorySuggestions
+- `frontend/src/components/layout/Layout.jsx` — topbar title centering
+- `frontend/src/index.css` — add `.account-switcher-scroll` and suggestion-dropdown styles
+
+**No backend changes required.**
+
+**Testing:**
+- Open app on a real mobile device or DevTools mobile emulation.
+- With 3+ accounts: verify account buttons stay on one line and scroll horizontally.
+- In RecordDeed: type 2+ characters in the subcategory field → suggestion list appears, arrow keys navigate, Enter selects, tap works.
+- In QuickEntryForm (ExpenseRow): same subcategory suggestion behaviour per row.
+- Verify topbar title is visually centred on narrow screens.
+
+- [x] Task 11.1 complete
 
 ---
 
