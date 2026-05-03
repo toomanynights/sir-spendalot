@@ -15,6 +15,7 @@ frontend/dist/
 
 # Local/editor/system
 .cursor/
+.claude/
 .history/
 .vscode/
 backups/

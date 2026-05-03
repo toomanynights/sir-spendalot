@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { HelpCircle, X } from 'lucide-react'
 import { Portal } from './ui/Portal'
 import { Button } from './ui/Button'
+import Tooltip from './ui/Tooltip'
 import { accountsApi } from '../api/accounts'
 import { ApiError } from '../api/client'
 import { usePaymentMethods } from '../hooks/usePaymentMethods'
@@ -153,12 +154,11 @@ export default function CheckupModal({ account, onClose, onSuccess }) {
               <div>
                 <span className="input-label flex items-center gap-1">
                   Difference
-                  <span
-                    className="text-gold-muted/70 cursor-help"
-                    title={diffExplanation(diff)}
-                  >
-                    <HelpCircle size={12} />
-                  </span>
+                  <Tooltip content={diffExplanation(diff)}>
+                    <span className="text-gold-muted/70 cursor-help">
+                      <HelpCircle size={12} />
+                    </span>
+                  </Tooltip>
                 </span>
                 <p className={`text-lg font-cinzel ${diffClass}`}>
                   {diff === 0 ? formatSigned(0) : formatSigned(diff)}
@@ -187,12 +187,11 @@ export default function CheckupModal({ account, onClose, onSuccess }) {
               <label className="checkup-row checkup-row-sundry">
                 <span className="checkup-row-name flex items-center gap-1">
                   Sundry coin
-                  <span
-                    className="text-gold-muted/70 cursor-help"
-                    title="Any sums that don't fit a named payment method — cash gifts, found coin, etc."
-                  >
-                    <HelpCircle size={12} />
-                  </span>
+                  <Tooltip content="Any sums that don't fit a named payment method — cash gifts, found coin, etc.">
+                    <span className="text-gold-muted/70 cursor-help">
+                      <HelpCircle size={12} />
+                    </span>
+                  </Tooltip>
                 </span>
                 <input
                   type="number"

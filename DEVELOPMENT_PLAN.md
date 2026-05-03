@@ -98,6 +98,7 @@
 - [ ] 9.13 - Column layout is not pretty, especially when one of the cards is too tall
 - [ ] 9.14 - allow rescheduling an instance, avoiding its regeneration despite changed date
 - [ ] 9.15 - Google Calendar integration
+- [x] 9.16 - Tooltips (i.e. on reconciliation screen) don't work on mobile - the same issue was with suggection lists, was resolved with custom suggestions
 
 ### Phase 10: Rolling predictions ✅ / ❌
 - [ ] 10.0 - Feature initiation (see specs)
@@ -2364,6 +2365,35 @@ A few things to start off (consider them to be discussion points rather than ord
   - keep visual styling consistent with medieval theme (subtle gold scrollbar treatment).
 
 **Mark complete:** `[x] 9.12 - Treasury layout: introduce scrollong when >5 items`
+
+---
+
+### Task 9.16: Mobile-compatible tooltips
+
+**What:** Native `title` attributes are hover-only and invisible on touch devices. Replace them with a custom `<Tooltip>` component that works on both desktop and mobile.
+
+**Specs:**
+
+- Create `frontend/src/components/ui/Tooltip.jsx` — a shared wrapper component:
+  - **Desktop:** show on hover (CSS `:hover`)
+  - **Mobile:** tap the wrapped element to toggle the tooltip; tap outside to dismiss
+  - Use `pointerdown` + `e.preventDefault()` pattern (same as `SubcategorySuggestions.jsx`) to avoid focus/blur issues on touch
+  - Absolutely positioned tooltip bubble, styled with medieval theme (dark background, gold border, `Crimson Text` font)
+  - Props: `content` (string), `children` (the trigger element)
+
+- Replace `title=` tooltip attributes in the following files:
+  - `frontend/src/components/CheckupModal.jsx` — "Difference" and "Sundry coin" help icons (primary case)
+  - `frontend/src/components/dashboard/FutureProphecies.jsx` — "Adjust before confirming" expand button
+  - `frontend/src/components/AccountSwitcher.jsx` — attention badge
+  - `frontend/src/components/layout/Sidebar.jsx` — collapse/expand toggle
+
+- **Excluded from scope (action buttons — same reasoning as TodayFortune):**
+  - `TodayFortune.jsx` — 4 icon buttons with `onClick`; tap triggers action directly
+  - `FutureProphecies.jsx` — expand toggle button with `onClick`
+  - `AccountSwitcher.jsx` — attention dot is inside an account-switching `<button>`; tooltip would conflict with the tap action
+  - `Sidebar.jsx` — collapse button is `hidden md:inline-flex` (not rendered on mobile); nav item labels only shown when collapsed (desktop only)
+
+**Mark complete:** `[x] 9.16 - Tooltips (i.e. on reconciliation screen) don't work on mobile - the same issue was with suggection lists, was resolved with custom suggestions`
 
 ---
 
