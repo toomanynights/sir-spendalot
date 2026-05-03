@@ -101,7 +101,15 @@
 - [x] 9.16 - Tooltips (i.e. on reconciliation screen) don't work on mobile - the same issue was with suggection lists, was resolved with custom suggestions
 
 ### Phase 10: Rolling predictions ✅ / ❌
-- [ ] 10.0 - Feature initiation (see specs)
+- [x] 10.0 - Feature initiation (see specs)
+- [ ] 10.1 - Data model: `rolling_budgets` table + Alembic migration
+- [ ] 10.2 - Rolling budget service: CRUD + `calculate_remaining()` + period bounds
+- [ ] 10.3 - Forecast integration: daily spread into `forecast_service`
+- [ ] 10.4 - Pattern suggestion engine (service + endpoint)
+- [ ] 10.5 - API layer: CRUD + suggestion endpoint
+- [ ] 10.6 - Frontend: Rolling Budgets card on Prophecies page
+- [ ] 10.7 - Frontend: Forecast/peril tooltip showing rolling budget contribution
+- [ ] 10.8 - Drift detection display in management card
 
 ### Phase 11: Mobile layout (note: for every page, analyze if it's possible/worthwhile to transition the page into responsive design, or alternatives preferrable - hide the whole page/parts of content/suggest using desktop/customized mobile view... Some pages/elements already adapted to mobile - "no change needed" is also a valid answer) ✅ / ❌
 - [x] 11.1 - General components (sidear, topbar, general page content) - make sure accounts in topbar are one line and slide-able on mobile; pay attention to subcategory suggestions on both dashboard and quick entry (don't seem to work on mobile now)
@@ -1973,16 +1981,31 @@ Instead, logic of "negative means gain" should remain on backend. For user, the 
 
 ### Task 7.9: Components reuse
 
-Reuse components wherever possible for design unification:
-- paging in Recent Chronicles is a separate component from that in Chronicles List; 
-- in "Prophecies", action buttons Edit/Delete/Pause look different than they do in Treasury, Chronicles; 
-- in Treasury, account type display (current/savings) is different from pill style as in topbar; 
-- "whisper" in Thy Lowest Fortunes dashboard block (Forecasted over the next X days) seems to be used in that single place only;
-- in Chronicles "Show deleted" is a checkbox inactive by default. In Proophecies it's a dropdown "Status" with "All" selected by default.
-- in Treasury expanding lines in Accounts and Categories look differently
-- etc...
-Suggest replacements where appropriate before implementing.
-After implementing and before moving to next feature, introduce rule change that will make the agent in future defelopment prioritize reusing components intead of creating new ones.
+**Goal:** Audit and unify inconsistent UI patterns for design coherence. Reuse existing shared components; extract new ones where the same pattern appears in 2+ places.
+
+**Items to address:**
+
+1. **Pagination** — Dashboard blocks (`RecentChronicles`, `FutureProphecies`) use raw `<button>` tags; `TransactionsPage` uses `Button` with a page number indicator. Create `src/components/ui/Pagination.jsx` accepting `{ page, hasPrev, hasNext, onPrev, onNext, showPageNumber? }`. Apply everywhere.
+
+2. **Action buttons — Prophecies** — Pause/Resume button in `PredictionsPage` uses custom inline `border border-gold/20 bg-black/20` styling instead of `Button variant="ghost"`. Fix it to match Chronicles/Treasury. Also normalize icon sizes to 16px across Chronicles (currently 14px mobile / 16px desktop) and Treasury (currently 18px).
+
+3. **Account type badge** — Treasury displays raw `({acc.account_type})` text via `.treasury-row-meta`; `AccountSwitcher` uses a `Badge` + icon. Create `src/components/ui/AccountTypeBadge.jsx` and use it in both places.
+
+4. **Whisper / subtitle text** — Skip. Styling variations are intentional design character; unifying would harm aesthetics.
+
+5. **Show deleted vs Status filter** — No change. Binary checkbox (Chronicles) and tri-state dropdown (Prophecies) serve different purposes and are appropriate for their contexts.
+
+6. **Expandable rows in Treasury** — Accounts use the `.treasury-account-expand` CSS class; Categories use an unstyled raw `<button>`. Apply `.treasury-account-expand` to the Categories expand button too.
+
+7. **Amount display** — `RecentChronicles` already has a local `AmountDisplay` component. The same sign/color logic is duplicated inline in `PredictionsPage` (×2), `TransactionsPage`, and `TodayFortune`. Promote `AmountDisplay` to `src/components/ui/AmountDisplay.jsx` and adopt everywhere.
+
+8. **Skeleton rows** — `SkeletonRow` is defined identically in both `RecentChronicles` and `FutureProphecies` as a local function. Extract to `src/components/ui/SkeletonRow.jsx`.
+
+9. **Empty states** — An `EmptyState` component already exists in `ui/Spinner.jsx` but is used nowhere. Apply it to all "no results" / "nothing here" messages across the app (at least 7 locations).
+
+10. **Filter bar** — `TransactionsPage` and `PredictionsPage` have nearly identical expandable card headers (chevron toggle + "Filters" title + reset button). Create a `FilterBar` wrapper component and apply to both.
+
+- [ ] Items 1–10 implemented
 
 **Mark complete:** `[ ] 7.9 - Components reuse`
 
@@ -2299,6 +2322,70 @@ A few things to start off (consider them to be discussion points rather than ord
 
 ---
 
+### Task 9.8: PWA Support
+
+**What:** Make Sir Spendalot installable as a Progressive Web App on mobile and desktop, with offline shell support.
+
+**Why:** The app is heavily used on mobile (Phase 11 mobile work); PWA enables home-screen installation, standalone display mode, and graceful offline handling. PWA also enables proper service-worker-based push notifications — architecturally different from the browser Notification API used in 7.10 — which allow notifications to fire even when the app tab is closed or the screen is locked.
+
+**Scope:**
+
+1. **Web App Manifest** — `public/manifest.json`:
+   - `name`: "Sir Spendalot", `short_name`: "Spendalot"
+   - `display`: `standalone`
+   - `theme_color`: `#d4af37`, `background_color`: `#1a0f0a`
+   - `start_url`: `/`
+   - Icon references (192×192, 512×512, 180×180 Apple touch)
+
+2. **Icon set** — The agent will provide a list of source files and required output sizes; the **user** performs the actual image conversion/export. Icons go in `public/icons/`.
+
+3. **Meta tags in `index.html`**:
+   - `<link rel="manifest" href="/manifest.json">`
+   - `<meta name="theme-color" content="#d4af37">`
+   - `<meta name="apple-mobile-web-app-capable" content="yes">`
+   - `<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">`
+   - `<meta name="apple-mobile-web-app-title" content="Spendalot">`
+   - `<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">`
+
+4. **Service Worker** via `vite-plugin-pwa` (`generateSW` strategy, Workbox):
+   - Cache-first for static assets (JS, CSS, fonts, images)
+   - Network-first for all `/api/*` routes (financial data must be fresh)
+   - Offline fallback page (`/offline.html`) shown when a navigation request fails with no cache hit
+
+5. **Vite config** — Add and configure `VitePWA` plugin.
+
+6. **Offline fallback page** — Minimal `public/offline.html` with medieval-themed message (no React required).
+
+7. **Migrate notifications to service worker push** — Replace the browser Notification API (7.10) with the Web Push / service worker push model so notifications fire even when the app tab is closed or the screen is locked:
+   - Backend: generate VAPID key pair, expose public key via `/api/settings/vapid-public-key`, add `/api/notifications/subscribe` endpoint to store `PushSubscription` objects per user, add `/api/notifications/unsubscribe`
+   - Service worker: add `push` event listener that calls `self.registration.showNotification()`
+   - Frontend: on notification opt-in, call `pushManager.subscribe()` and POST the subscription to the backend; update Settings page toggle accordingly
+   - Backend notification scheduler: replace `notify` calls that use the browser API with Web Push dispatch (`pywebpush` or equivalent) to all stored subscriptions for the user
+
+**Out of scope:**
+- Background sync for offline-queued transactions
+- Backend changes unrelated to push notifications
+
+**Files to change / create:**
+
+| File | Action |
+|---|---|
+| `frontend/package.json` | Add `vite-plugin-pwa` devDependency |
+| `frontend/vite.config.js` | Add VitePWA plugin config |
+| `frontend/public/manifest.json` | Create |
+| `frontend/public/offline.html` | Create |
+| `frontend/public/icons/icon-192.png` | User provides after agent lists source |
+| `frontend/public/icons/icon-512.png` | User provides after agent lists source |
+| `frontend/public/icons/apple-touch-icon.png` | User provides (180×180) |
+| `frontend/index.html` | Add PWA meta tags + manifest link |
+| `backend/app/api/notifications.py` | Add subscribe/unsubscribe + VAPID key endpoints |
+| `backend/app/services/push_service.py` | Web Push dispatch logic (replaces browser notify calls) |
+| `backend/requirements.txt` | Add `pywebpush` |
+
+**Mark complete:** `[x] 9.8 - Implement PWA support`
+
+---
+
 ### Task 9.9: Optional normalized subcategory model
 
 **What:** Introduce optional `subcategory_id` linkage for transactions while preserving current free-text `subcategory` behavior for compatibility and import flexibility.
@@ -2407,24 +2494,243 @@ A few things to start off (consider them to be discussion points rather than ord
 
 Initiate feature's R&D, plan the implementation when the concept is locked.
 
-Draft:
-- Sometimes unplanned expenses show patterns 
-- for example: cat food is, on the average, 2 transactions 50 EUR each
-- it can't be a prediction: there is no exact range (sometimes food for one cat runs out, sometimes for other, sometimes for both...)
-- Solution: rolling prediction
-- There should be a tool allowing to track patterns over 1/2/3 rolling periods and suggest creating/adjusting rolling expenses
-- For example: rolling prediction expects an average of 100 EUR per month for cat food
-- if 0 spent on cat food, it expects -100 by the end of period. If 20 spent, it expects 80 more
-- sometimes parent category (i.e. cats) can show no patterns while a subcategory (i.e. Cats -> Cat food) does. The system should account for both cases.
-- it should track shifts and suggest adjustments (example: over past three rolling periods there were on the average 70/period spent, while rolling average expects 100 - suggest adjustments) 
-- can use existing analytics methods 
-- due to many variables, there should be a tooltip in dashboard showing how the predictions were calculated
+**Concept:** Some unplanned expenses show consistent monthly patterns without a fixed date (e.g. cat food: ~2 transactions × ~50 EUR/month). These can't be Prophecies, but they should still influence the forecast. Rolling budgets are per-category, per-period spending expectations that feed into the multi-day balance forecast.
 
-Study the codebase, suggest technical solution, UI placement, UI/UX, etc. Plan the implementation accordingly.
+**Key design decisions (locked):**
+- **Period type:** Fixed calendar month only (v1). Not rolling windows.
+- **Historical baseline:** Last 3 complete calendar months used for suggestions and drift detection.
+- **Scope:** `type="unplanned"` categories only — avoids double-counting with the rolling average (which uses only `type="daily"` transactions).
+- **Per-account:** Yes. Rolling budgets belong to an account.
+- **No effect on This Day's Fortune:** Rolling budgets do not affect today's actual balance or today's daily spend summary.
+- **Forecast effect only:** Rolling budget contributions are spread into the forecast array, which drives Thy Lowest Fortunes.
+- **Forecast logic — current month:** `remaining = max(0, budget − spent_since_1st_of_month)`. Spread `remaining / days_left_in_month` as an additional daily deduction across remaining days of the current month (including today).
+- **Forecast logic — future months:** Spread `budget / days_in_that_month` per day across the full month.
+- **Dynamic calculation:** Calculated fresh on every forecast request. No stored running totals.
+- **Drift detection:** Passive. Show trailing 3-period actuals vs. budget in the management card. Flag >20% deviation.
+- **Pattern suggestions:** Analyze last 3 complete months per category/subcategory. Suggest where coefficient of variation < 0.5 and pattern is present in ≥ 2 of 3 months.
+- **UI placement:** Card on the existing Prophecies page (no new nav item, no page rename).
 
 DOD: feature is locked, described in specs, plan updated.
 
-**Mark complete:** `[ ] 10.0 - Feature initiation (see specs)`
+- [x] 10.0 - Feature initiation (see specs)
+
+---
+
+### Task 10.1: Data model — `rolling_budgets` table + Alembic migration
+
+**New table: `rolling_budgets`**
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | serial PK | |
+| `account_id` | int FK accounts NOT NULL | |
+| `name` | varchar NOT NULL | User-facing label (e.g. "Cat food") |
+| `category_id` | int FK categories nullable | null = matches all unplanned transactions |
+| `subcategory` | varchar nullable | null = all subcategories within the category |
+| `amount` | numeric NOT NULL | Expected total per period, always positive |
+| `is_active` | bool NOT NULL DEFAULT true | |
+| `created_at` | timestamp NOT NULL | |
+| `updated_at` | timestamp NOT NULL | |
+
+**Constraints:**
+- `category_id` must reference a category with `type = "unplanned"`. Enforced at service layer (not DB constraint).
+- `(account_id, category_id, subcategory)` should be unique among active budgets to prevent duplicates.
+
+**Migration:** Standard Alembic autogenerate from SQLAlchemy model.
+
+**No API, no frontend in this task.**
+
+**Files to create/modify:**
+- `backend/app/models/rolling_budget.py` — new SQLAlchemy model
+- `backend/app/models/__init__.py` — import new model
+- `alembic/versions/xxx_add_rolling_budgets.py` — generated migration
+
+- [ ] 10.1 complete
+
+---
+
+### Task 10.2: Rolling budget service — CRUD + period calculation
+
+**New service: `backend/app/services/rolling_budget_service.py`**
+
+**CRUD operations:**
+- `get_budgets(db, account_id)` → list of active rolling budgets for an account
+- `get_budget(db, budget_id)` → single budget or 404
+- `create_budget(db, data)` → validate category is `type="unplanned"`, insert, return
+- `update_budget(db, budget_id, data)` → partial update, return updated
+- `delete_budget(db, budget_id)` → hard delete (no soft delete needed)
+
+**Period calculation:**
+- `get_period_bounds(reference_date) → (period_start: date, period_end: date)` — returns the first and last day of the calendar month containing `reference_date`.
+- `calculate_spent(db, budget, period_start, period_end) → Decimal` — sum of matching non-deleted transactions in `[period_start, period_end]`. Matches on `account_id` + optionally `category_id` + optionally `subcategory` (exact string match). Transaction types included: `daily`, `unplanned`, `predicted` (consistent with other analytics queries).
+- `calculate_remaining(db, budget, reference_date) → Decimal` — `max(0, budget.amount − calculate_spent(...))`.
+
+**Historical period helper:**
+- `get_last_n_complete_months(n, reference_date) → list[tuple[date, date]]` — returns the bounds for the last `n` complete calendar months before `reference_date`'s month. Used by suggestion engine and drift detection.
+
+**Files to create:**
+- `backend/app/services/rolling_budget_service.py`
+- `backend/app/schemas/rolling_budget.py` — Pydantic schemas (Create, Update, Response, with `remaining`, `spent_this_period`, `period_start`, `period_end` in Response)
+
+- [ ] 10.2 complete
+
+---
+
+### Task 10.3: Forecast integration
+
+**Modify `backend/app/services/forecast_service.py`**
+
+After building the base forecast array (existing logic), apply rolling budget adjustments as an additional pass:
+
+1. Fetch all active rolling budgets for the account.
+2. For each budget, calculate `remaining` for the current month.
+3. For each day in the forecast array:
+   - If the day is in the **current calendar month**: add `remaining / days_left_in_current_month` to that day's deduction. `days_left` = number of days from today to end of month (inclusive).
+   - If the day is in a **future calendar month**: add `budget.amount / total_days_in_that_month` to that day's deduction.
+4. The adjusted deductions reduce `predicted_balance` for those days, which propagates to Thy Lowest Fortunes.
+
+**No change to `TodayStatsResponse` or `flexible_daily`.** Rolling budgets do not appear in This Day's Fortune.
+
+**Add to `ForecastResponse`:**
+- `rolling_budget_current_remaining: Decimal` — total remaining across all active rolling budgets this month. Used by the frontend tooltip.
+- `rolling_budget_count: int` — number of active rolling budgets contributing.
+
+**Files to modify:**
+- `backend/app/services/forecast_service.py`
+- `backend/app/schemas/prediction.py` — extend `ForecastResponse`
+
+- [ ] 10.3 complete
+
+---
+
+### Task 10.4: Pattern suggestion engine
+
+**New function in `rolling_budget_service.py`: `get_suggestions(db, account_id)`**
+
+Algorithm:
+1. Determine last 3 complete calendar months.
+2. Query all non-deleted `type="unplanned"` transactions for the account in that window.
+3. Group by `(category_id, subcategory)`. Also aggregate at `(category_id, None)` level.
+4. For each group, calculate monthly totals for each of the 3 months (0 if no transactions that month).
+5. Filter: at least 2 of 3 months have spending > 0.
+6. Calculate `mean` and `coefficient_of_variation = stdev / mean`. Filter: CV < 0.5.
+7. Prefer subcategory-level suggestions over parent-category when both qualify and the subcategory explains most of the parent's variance.
+8. Check if a rolling budget already exists for this `(account_id, category_id, subcategory)` — if so, mark as `already_budgeted: true` in the suggestion (don't suppress it; user may want to update).
+9. Return list of `RollingBudgetSuggestion`:
+   - `category_id`, `category_name`, `subcategory`
+   - `suggested_amount` (3-month mean, rounded to nearest 5 EUR)
+   - `monthly_actuals: list[Decimal]` (the 3 months' totals, for display)
+   - `coefficient_of_variation: float`
+   - `confidence: "high" | "medium"` (`high` if CV < 0.2, else `medium`)
+   - `already_budgeted: bool`
+
+**New endpoint:** `GET /api/rolling-budgets/suggestions` — no parameters needed (uses account from query param, same pattern as other endpoints).
+
+**Files to modify:**
+- `backend/app/services/rolling_budget_service.py` — add `get_suggestions()`
+- `backend/app/schemas/rolling_budget.py` — add `RollingBudgetSuggestion` schema
+- `backend/app/api/rolling_budgets.py` — add suggestions endpoint (see Task 10.5)
+
+- [ ] 10.4 complete
+
+---
+
+### Task 10.5: API layer — CRUD + suggestion endpoint
+
+**New router: `backend/app/api/rolling_budgets.py`**
+
+Endpoints:
+- `GET /api/rolling-budgets` — list active budgets for account (`?account_id=`)
+- `POST /api/rolling-budgets` — create budget
+- `GET /api/rolling-budgets/{id}` — fetch single
+- `PATCH /api/rolling-budgets/{id}` — update
+- `DELETE /api/rolling-budgets/{id}` — delete
+- `GET /api/rolling-budgets/suggestions` — pattern suggestions (note: register this route **before** `/{id}` to avoid routing conflict)
+
+**Register router in `backend/app/main.py`:** `app.include_router(rolling_budgets.router, prefix="/api/rolling-budgets", tags=["rolling-budgets"])`
+
+**Files to create/modify:**
+- `backend/app/api/rolling_budgets.py` — new router
+- `backend/app/main.py` — register router
+
+- [ ] 10.5 complete
+
+---
+
+### Task 10.6: Frontend — Rolling Budgets card on Prophecies page
+
+**UI placement:** New card at the bottom of `frontend/src/pages/PropheciesPage.jsx` (or wherever the page content is assembled). No new nav item. No page rename.
+
+**Card: "Rolling Budgets"**
+
+Layout:
+1. **Header row:** "Rolling Budgets" title + "+ Add Budget" button + "Suggest Budgets" button.
+2. **Budget list:** One row per active budget showing:
+   - Name + category/subcategory label
+   - Progress bar: `spent_this_period / amount` (fill color: gold if < 80%, orange if 80–100%, red if over)
+   - `spent_this_period` / `amount` EUR text + `remaining` EUR + days left in period
+   - Edit (pencil) + Delete (trash) icon buttons
+   - Drift badge: if 3-period average deviates >20% from budget, show amber "Consider adjusting" badge with tooltip showing the 3-month actuals
+3. **Suggestions panel** (shown when "Suggest Budgets" is clicked or on first load if no budgets exist):
+   - List of `RollingBudgetSuggestion` items, each showing category, monthly actuals, suggested amount, confidence badge
+   - Per-item: "Add" button (prefills create form with suggested values) + "Dismiss" button
+   - `already_budgeted` items shown with a muted "Already tracked" state instead of Add
+
+4. **Add/Edit modal:** Standard `Modal` component. Fields:
+   - Name (text input)
+   - Category (select, filtered to `type="unplanned"` categories)
+   - Subcategory (text input, optional)
+   - Amount (number input, EUR/month)
+   - Active toggle
+
+**API calls:** Use existing `api/` pattern. New `rollingBudgets.js` (or equivalent) in `frontend/src/api/`.
+
+**Files to create/modify:**
+- `frontend/src/api/rollingBudgets.js` — API client
+- `frontend/src/pages/PropheciesPage.jsx` — add Rolling Budgets card
+- `frontend/src/components/prophecies/RollingBudgetCard.jsx` — new card component
+
+- [ ] 10.6 complete
+
+---
+
+### Task 10.7: Frontend — Forecast tooltip showing rolling budget contribution
+
+**Context:** The forecast drives the "Thy Lowest Fortunes" card on the dashboard. When rolling budgets are active, the forecast balance dips lower than it would otherwise. The user should be able to see why.
+
+**Change:** Add a tooltip or expandable info section on the "Thy Lowest Fortunes" card (and/or the forecast section) that shows:
+- "Rolling budgets contributing to forecast: X EUR remaining this month across N budgets"
+- Breakdown list: `[name]: Y EUR remaining` per budget
+
+Data source: `rolling_budget_current_remaining` and `rolling_budget_count` from the extended `ForecastResponse` (added in Task 10.3). A separate fetch to `GET /api/rolling-budgets` provides the per-budget breakdown.
+
+Use the existing custom `Tooltip` component (added in Phase 9.16) for the info icon pattern.
+
+**Files to modify:**
+- `frontend/src/components/dashboard/LowestFortunes.jsx` (or equivalent peril/forecast card) — add info tooltip
+
+- [ ] 10.7 complete
+
+---
+
+### Task 10.8: Drift detection display in management card
+
+**Context:** Task 10.6 includes the drift badge UI. This task implements the backend data that feeds it.
+
+**Add to `RollingBudgetResponse`:**
+- `monthly_actuals: list[Decimal]` — last 3 complete months' spending for this budget's category/subcategory
+- `actuals_average: Decimal` — mean of `monthly_actuals`
+- `drift_flag: bool` — true if `abs(actuals_average − amount) / amount > 0.20`
+
+Calculated in `get_budgets()` / `get_budget()` by calling `get_last_n_complete_months(3)` and `calculate_spent()` for each.
+
+**Frontend** (already wired in 10.6): render the drift badge when `drift_flag` is true, with a tooltip showing `monthly_actuals` and `actuals_average`.
+
+**Files to modify:**
+- `backend/app/services/rolling_budget_service.py` — enrich response with actuals + drift flag
+- `backend/app/schemas/rolling_budget.py` — add fields to `RollingBudgetResponse`
+
+- [ ] 10.8 complete
 
 ---
 
