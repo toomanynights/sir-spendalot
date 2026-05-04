@@ -99,6 +99,7 @@
 - [ ] 9.14 - allow rescheduling an instance, avoiding its regeneration despite changed date
 - [ ] 9.15 - Google Calendar integration
 - [x] 9.16 - Tooltips (i.e. on reconciliation screen) don't work on mobile - the same issue was with suggection lists, was resolved with custom suggestions
+- [ ] 9.17 - Show transfer direction in Recent Chronicles
 
 ### Phase 10: Rolling predictions ✅ / ❌
 - [x] 10.0 - Feature initiation (see specs)
@@ -116,7 +117,7 @@
 - [x] 11.2 - Dashboard page  (make sure the order of cards is the same on mobile as left-to-right on desktop: This Day's Fortune -> Thy Lowest Fortunes -> Record Thy Deed -> Recent Chronicles -> Future Prophecies), floating assistant (make sure a tap on activated assistant deactivates it; also it feels a bit intrusive on mobile now)
 - [x] 11.3 - Quick Entry page
 - [x] 11.4 - Chronicles page
-- [ ] 11.5 - Prophecies page
+- [x] 11.5 - Prophecies page
 - [ ] 11.6 - Analytics page
 - [ ] 11.7 - Treasury page
 - [ ] 11.8 - Settings page
@@ -2304,6 +2305,83 @@ A few things to start off (consider them to be discussion points rather than ord
 
 ---
 
+#### Specs
+
+**Period Control (unified)**
+- Single `PeriodControl` at the top of the page: segmented toggle `7d | 30d | 60d | 90d` + step-back arrows (Previous / Next)
+- Steps by exactly `periodDays` days; Next disabled at current period (offset = 0)
+- State: `periodDays` (default 30) + `periodOffset` (integer, 0 = current)
+- Feeds all charts except Monthly Overview
+
+**Spending Composition (tabbed single card)**
+- One card, two tabs: **By Type** (existing DonutChart kept as-is) / **By Category** (new horizontal bar chart)
+- Daily/Unplanned toggle lives inside the By Category tab
+- Subcategory drill-down: click a category row to expand (replaces the `<select>` dropdown)
+- Both tabs use the global period
+
+**Daily Spending (SVG line chart)**
+- Replace MiniBars with `SpendingLineChart`: `<polyline>` for the spending line, dashed `<line>` for rolling average baseline, `<circle>` per point colored by status (high/low/normal)
+- Uses global period
+
+**Monthly Overview (own toggle, independent of global period)**
+- `MonthlyGroupedBarChart`: side-by-side bars, spending (danger red) vs gains (success green) per month
+- Internal 6mo / 12mo segmented toggle in card header
+- Replaces text cards + pagination entirely
+
+**Balance Over Time (new)**
+- New `BalanceLineChart` card — line chart of daily account balance
+- Zero-line in danger red to mark the floor
+- Uses global period (`days` / `offset`)
+- Requires new backend endpoint `/stats/balance-history`
+
+**Insights split into two cards**
+- **Achievements**: streaks, records, most expensive purchase, biggest day, most frequent method/category + new `period_net` and `savings_rate` fields
+- **Category Trends** (separate card): category delta percentages as a compact bar/list
+
+---
+
+#### Implementation
+
+**Backend changes** (no migrations needed):
+
+1. Add to `backend/app/schemas/stats.py`:
+   - `BalanceHistoryPoint(date, balance)` and `BalanceHistoryResponse(account_id, days, points)`
+   - Three new fields on `AnalyticsInsightsResponse`: `period_total_spending`, `period_total_gains`, `period_net`
+
+2. Add `get_balance_history(db, days, account_id)` to `backend/app/services/stats_service.py`:
+   - Query all non-deleted transactions grouped by date, build `by_date` dict
+   - Walk forward from `account.initial_balance` to get opening balance at `start_date`
+   - Walk day-by-day from `start_date` to today, appending one `BalanceHistoryPoint` per day
+
+3. Enrich `get_analytics_insights` with the three period total fields (derivable from the `txs` already fetched)
+
+4. Add `GET /api/stats/balance-history` endpoint to `backend/app/api/stats.py`
+
+**Frontend changes:**
+
+5. `frontend/src/api/stats.js` — add `balanceHistory` call
+6. `frontend/src/hooks/useStats.js` — add `useBalanceHistory(days, accountId)`
+
+7. Create `frontend/src/components/charts/` with four SVG components (no external library):
+   - `HorizBarChart.jsx` — horizontal bars, proportional to max, gold fill
+   - `SpendingLineChart.jsx` — line + dashed baseline + status-colored dots
+   - `MonthlyGroupedBarChart.jsx` — two bars per month (danger/success)
+   - `BalanceLineChart.jsx` — line chart + zero-line in danger red
+   - `index.js` — re-export barrel
+
+8. Restructure `frontend/src/pages/AnalyticsPage.jsx`:
+   - Remove: `typeWindow`, `monthAnchor`, `monthPage`, `SectionHeading`, `MiniBars`, `MONTH_PAGE_SIZE`
+   - Add: `periodDays`, `periodOffset`, `activeCompositionTab`, `monthlyRange`
+   - Page order: PeriodControl → Composition (tabbed) → Daily Spending → Monthly Overview → Balance History → Achievements → Category Trends
+
+**[ ] Step 1: Backend — balance-history endpoint**
+**[ ] Step 2: Backend — enrich insights with period totals**
+**[ ] Step 3: Frontend — API + hook for balance-history**
+**[ ] Step 4: Frontend — four chart components**
+**[ ] Step 5: Frontend — AnalyticsPage restructure**
+
+---
+
 ### Task 9.6: Sub-zero date line in Thy Lowest Fortunes
 
 **What:** Add an optional status line at the top of `Thy Lowest Fortunes` indicating when balance first falls below zero.
@@ -2904,6 +2982,42 @@ Calculated in `get_budgets()` / `get_budget()` by calling `get_last_n_complete_m
 - On desktop (≥768px): verify the table layout is unchanged.
 
 - [x] Task 11.4 complete
+
+---
+
+### Task 11.5: Prophecies page mobile layout
+
+**Analysis:**
+
+The Prophecies page (`PredictionsPage.jsx`) is already largely mobile-friendly — it uses `flex-col`, single-column grids by default, `min-h-touch` on the filters toggle, and the `TemplateModal` drops to a single-column form on mobile. Two areas need improvement:
+
+1. **Template card action bar** (`flex flex-wrap items-center justify-between gap-3`) — on narrow screens the "Upcoming instances (N)" toggle and the Pause/Edit/Delete button group wrap onto separate lines but can look unbalanced when the instance count is zero or the template name is long.
+2. **Instance rows inside expanded templates** — `flex items-center justify-between gap-3` works, but the Confirm/Skip buttons are plain ghost buttons with no minimum tap target enforced; they can be small on mobile.
+3. **TemplateModal scroll** — the modal uses `max-w-2xl` with `items-center justify-center` centering. On short-viewport phones (e.g. iPhone SE) a form with many fields can overflow without scrolling. The inner container needs `overflow-y-auto max-h-[90vh]`.
+
+Everything else (filters card, template list layout, overall page container) already behaves correctly on mobile. No new components are needed.
+
+**Scope:**
+
+1. Wrap the modal inner `div` to allow vertical scrolling on short screens: add `overflow-y-auto max-h-[90vh]` to the scrollable inner wrapper.
+2. Ensure instance Confirm/Skip buttons have adequate tap targets: add `min-h-touch` (or equivalent `py-2 px-3`) so they meet the 44px minimum.
+3. On the template card action bar, on `< sm` screens stack the instances toggle above the action buttons (`flex-col sm:flex-row`) so neither wraps awkwardly.
+
+**Files to modify:**
+
+- `frontend/src/pages/PredictionsPage.jsx`
+
+**No backend changes required.**
+
+**Testing:**
+
+- Open Prophecies page on a 390 × 844 viewport (iPhone 14 emulation in DevTools).
+- Expand a template's "Upcoming instances" — Confirm and Skip buttons should be easily tappable (≥44px tall).
+- Tap "New Template" → modal opens; scroll down through all fields; form is fully accessible without overflow clipping.
+- On a short viewport (375 × 667 — iPhone SE): open modal with "Every N days" selected (most fields visible); verify the form scrolls inside the modal without the page scrolling behind it.
+- On desktop (≥768px): verify template cards and modal layout are unchanged.
+
+- [x] Task 11.5 complete
 
 ---
 

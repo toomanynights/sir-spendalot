@@ -81,8 +81,8 @@ function TemplateModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="w-full max-w-2xl rounded-lg border border-gold/30 shadow-card bg-brown-dark">
+    <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/70 px-4 pt-[4.5rem] pb-6 overflow-y-auto md:pt-6">
+      <div className="w-full max-w-2xl rounded-lg border border-gold/30 shadow-card bg-brown-dark my-auto">
         <div className="card-header">
           <h3 className="card-title">
             {isCreate ? 'Create Prophecy Template' : `Edit Prophecy Template #${template?.id}`}
@@ -476,7 +476,7 @@ export default function PredictionsPage() {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gold/10 pt-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-gold/10 pt-3">
                         <button
                           type="button"
                           onClick={() => toggleExpanded(template.id)}
@@ -538,7 +538,7 @@ export default function PredictionsPage() {
                               <div className="flex items-center gap-2">
                                 <Button
                                   variant="ghost"
-                                  className="text-success"
+                                  className="text-success min-h-touch px-3"
                                   onClick={() => handleConfirmInstance(instance)}
                                   disabled={confirmInstance.isPending}
                                 >
@@ -546,7 +546,7 @@ export default function PredictionsPage() {
                                 </Button>
                                 <Button
                                   variant="ghost"
-                                  className="text-danger"
+                                  className="text-danger min-h-touch px-3"
                                   onClick={() => handleSkipInstance(instance.id)}
                                   disabled={skipInstance.isPending}
                                 >
