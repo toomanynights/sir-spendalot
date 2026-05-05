@@ -99,7 +99,7 @@
 - [ ] 9.14 - allow rescheduling an instance, avoiding its regeneration despite changed date
 - [ ] 9.15 - Google Calendar integration
 - [x] 9.16 - Tooltips (i.e. on reconciliation screen) don't work on mobile - the same issue was with suggection lists, was resolved with custom suggestions
-- [ ] 9.17 - Show transfer direction in Recent Chronicles
+- [x] 9.17 - Show transfer direction in Recent Chronicles
 
 ### Phase 10: Rolling predictions ✅ / ❌
 - [x] 10.0 - Feature initiation (see specs)
@@ -2559,6 +2559,28 @@ A few things to start off (consider them to be discussion points rather than ord
   - `Sidebar.jsx` — collapse button is `hidden md:inline-flex` (not rendered on mobile); nav item labels only shown when collapsed (desktop only)
 
 **Mark complete:** `[x] 9.16 - Tooltips (i.e. on reconciliation screen) don't work on mobile - the same issue was with suggection lists, was resolved with custom suggestions`
+
+---
+
+### Task 9.17: Show transfer direction in Recent Chronicles
+
+**What:** Transfer rows in Recent Chronicles currently show only a "Transfer" badge with no indication of which account the money moved to or from. Display the direction as a secondary meta line (same position as subcategory for regular transactions).
+
+**Specs:**
+
+**Backend — `backend/app/services/transfer_service.py`:**
+- Change `_build_leg` signature: replace `counterpart_name` with `from_name` and `to_name`
+- New auto-generated label: `description or f"Transfer: {from_name} → {to_name}"`
+- Both legs receive the same string (it encodes the full direction)
+- Update both `_build_leg` calls in `create_transfer` to pass `from_account.name` and `to_account.name`
+- No migration needed; existing rows keep their old `"Transfer to/from …"` descriptions — these are acceptable to display as-is
+
+**Frontend — `frontend/src/components/dashboard/RecentChronicles.jsx`:**
+- In `TransactionRow`, for `type === 'transfer'` rows, include `tx.description` in `metaParts` as the secondary line
+- Primary label ("Transfer") and type badge are unchanged
+- Example result: primary line shows **Transfer**, secondary line shows **Transfer: Checking → Savings** (or the legacy `"Transfer to/from Savings"` for old rows)
+
+**Mark complete:** `[x] 9.17 - Show transfer direction in Recent Chronicles`
 
 ---
 

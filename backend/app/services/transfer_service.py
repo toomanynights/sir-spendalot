@@ -28,10 +28,11 @@ def _build_leg(
     amount: Decimal,
     transfer_date: date,
     description: Optional[str],
-    counterpart_name: str,
+    from_name: str,
+    to_name: str,
 ) -> Transaction:
     """Build a single transaction leg for a transfer."""
-    label = description or f"Transfer to/from {counterpart_name}"
+    label = description or f"{from_name} → {to_name}"
     return Transaction(
         account_id=account_id,
         amount=amount,
@@ -63,7 +64,8 @@ def create_transfer(db: Session, data: TransferCreate) -> TransferResponse:
         amount=data.amount,
         transfer_date=data.transfer_date,
         description=data.description,
-        counterpart_name=to_account.name,
+        from_name=from_account.name,
+        to_name=to_account.name,
     )
 
     # Credit leg: negative amount increases destination account balance
@@ -72,7 +74,8 @@ def create_transfer(db: Session, data: TransferCreate) -> TransferResponse:
         amount=-data.amount,
         transfer_date=data.transfer_date,
         description=data.description,
-        counterpart_name=from_account.name,
+        from_name=from_account.name,
+        to_name=to_account.name,
     )
 
     transfer = Transfer(

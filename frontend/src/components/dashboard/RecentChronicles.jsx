@@ -67,10 +67,9 @@ function TransactionRow({ tx }) {
       ? TYPE_LABELS[tx.type]
       : (tx.top_category_name ?? tx.category_name ?? tx.description ?? '—')
 
-  const metaParts = [
-    tx.subcategory,
-    tx.payment_method_name,
-  ].filter(Boolean)
+  const metaParts = tx.type === 'transfer'
+    ? [tx.description].filter(Boolean)
+    : [tx.subcategory, tx.payment_method_name].filter(Boolean)
 
   function handleConfirm(e) {
     e.stopPropagation()
