@@ -91,7 +91,7 @@
 - [x] 9.6 - add an optional line on top of "Thy Lowest Fortunes" block, showing the date when the account will go below zero (if present)
 - [ ] 9.7 - make "Show predictive features on non-primary accounts" setting actualy work (dashboard + analytics with the same logic as in dashboard)
 - [ ] 9.8 - Implement PWA support
-- [ ] 9.9 - Optional normalized subcategory model (`subcategory_id`) with backward-compatible text fallback
+- [x] 9.9 - Optional normalized subcategory model (`subcategory_id`) with backward-compatible text fallback
 - [x] 9.10 - Color-code (expenses vs earnings) "Future Prophecies" block (Dashboard) + Prophecies Awaiting (Quick entry)
 - [ ] 9.11 - Category management (reassign/remove subcategory parent; allow renaming subcategories; change subcategory text in transactions when subcategory is renamed...)
 - [x] 9.12 - Treasury layout: introduce scrollong when >5 items
@@ -100,6 +100,7 @@
 - [ ] 9.15 - Google Calendar integration
 - [x] 9.16 - Tooltips (i.e. on reconciliation screen) don't work on mobile - the same issue was with suggection lists, was resolved with custom suggestions
 - [x] 9.17 - Show transfer direction in Recent Chronicles
+- [ ] 9.18 - Show original scheduled date when a prediction instance was confirmed on a different date
 
 ### Phase 10: Rolling predictions ✅ / ❌
 - [x] 10.0 - Feature initiation (see specs)
@@ -2468,25 +2469,48 @@ A few things to start off (consider them to be discussion points rather than ord
 
 **What:** Introduce optional `subcategory_id` linkage for transactions while preserving current free-text `subcategory` behavior for compatibility and import flexibility.
 
-**Why:** Keep quick-entry friendliness and historical import tolerance, while enabling stricter taxonomy where desired.
+**Why:** Keep quick-entry friendliness and historical import tolerance, while enabling stricter taxonomy where desired (and enabling reliable rename/reassign in 9.11).
 
-**Scope (planned):**
-- Add dedicated subcategory entities (child categories or separate table) and add nullable `transactions.subcategory_id` FK.
-- Keep existing `transactions.subcategory` text column during transition.
-- Write path:
-  - when a known subcategory entity is selected, persist `subcategory_id` and keep mirrored text;
-  - when user types custom text, persist text and optionally auto-create/link subcategory entity based on settings.
-- Read/filter path supports both:
-  - `subcategory_id` exact matching for normalized rows,
-  - text fallback for legacy rows.
-- Migration/backfill:
-  - create subcategory entities from existing `(parent category, subcategory text)` usage;
-  - backfill `subcategory_id` where unambiguous.
-- Importer compatibility:
-  - continue accepting raw text,
-  - optionally resolve to existing/new subcategory entities.
+**Specs:**
 
-**Mark complete:** `[ ] 9.9 - Optional normalized subcategory model`
+#### Database
+- Add `transactions.subcategory_id`: nullable FK → `categories.id`, `ON DELETE RESTRICT`.
+  - RESTRICT chosen because 9.11 will add management UI; deletion of a linked subcategory entity must go through that UI, not silently null out transaction data.
+- Keep `transactions.subcategory` text column unchanged — always the display source of truth.
+- Backfill: for each transaction where `subcategory IS NOT NULL AND category_id IS NOT NULL`, find a child category where `parent_id = transactions.category_id AND name ILIKE transactions.subcategory` — set `subcategory_id` if exactly one match; leave null otherwise (no auto-creation during migration).
+- Post-migration: query and log any transactions where `subcategory IS NOT NULL AND subcategory_id IS NULL` — these are corner cases (orphan text with no matching child entity). Report count and samples to user.
+
+#### Backend — write path
+- `TransactionCreate` / `TransactionUpdate` schemas: add optional `subcategory_id: Optional[int] = None`.
+- Resolution logic (applied in `transaction_service` on create and update):
+  | Input | Action |
+  |---|---|
+  | `subcategory_id` only | Resolve child category name → write both `subcategory_id` and mirror text into `subcategory` |
+  | `subcategory` text only | Look up matching child under same parent; if found set `subcategory_id`; if not found leave `subcategory_id = null` |
+  | Both provided | Validate they agree (name match); `subcategory_id` wins; its `.name` overwrites text |
+  | Neither | Both remain null |
+- Validation: `require_subcategory` continues checking the text field (always populated when `subcategory_id` is set).
+
+#### Backend — read path
+- `TransactionResponse`: add `subcategory_id: Optional[int] = None`.
+- `GET /api/transactions` filter: add optional `subcategory_id: int` for exact-match filtering alongside existing text filter.
+- All other endpoints unchanged: `/subcategories`, `/categories/subcategory-usage`, `/stats/spending-by-subcategory` continue operating on text.
+
+#### Frontend — QuickEntryForm
+- After `ensureSubcategories()` resolves child category objects, include `subcategory_id` in the batch transaction payload alongside `subcategory` text.
+- No changes to `ExpenseRow`, `SubcategorySuggestions`, or any display component.
+
+#### Importer
+- After `_ensure_subcategory_exists()` creates/finds the child category, include its `id` as `subcategory_id` in the transaction payload passed to `create_transaction`.
+- CSV parsing, dry-run, mapping schemas: untouched.
+
+#### Unchanged
+- Category hierarchy (1-level enforcement), deletion rules for categories with children/transactions.
+- All display components reading `subcategory` text.
+- `subcategory-usage`, `spending-by-subcategory` aggregation (text-based).
+- Import mapping model and dry-run logic.
+
+**Mark complete:** `[x] 9.9 - Optional normalized subcategory model`
 
 ---
 
@@ -2581,6 +2605,30 @@ A few things to start off (consider them to be discussion points rather than ord
 - Example result: primary line shows **Transfer**, secondary line shows **Transfer: Checking → Savings** (or the legacy `"Transfer to/from Savings"` for old rows)
 
 **Mark complete:** `[x] 9.17 - Show transfer direction in Recent Chronicles`
+
+---
+
+### Task 9.18: Show original scheduled date when prediction confirmed on a different date
+
+**What:** When a prediction instance is confirmed with a transaction date that differs from its `scheduled_date`, surface the original scheduled date in the UI so the user can tell what the payment was "for".
+
+**Why:** Currently the workaround is to put "In lieu of 7 Jul 2026" in the `subcategory` field — an abuse of that field that pollutes subcategory data and will interfere with 9.11 management. The correct fix is to display the scheduled date directly from the prediction instance record, which already stores it.
+
+**Context:**
+- `PredictionInstance.scheduled_date` is always the originally planned date.
+- `Transaction.transaction_date` is the actual confirmation date.
+- These diverge when the user submits a prediction on a day other than its scheduled date.
+- The subcategory field should never be used as a workaround for this.
+
+**Scope:**
+- Backend: `TransactionResponse` already returns `transaction_date`. The confirmed prediction's `scheduled_date` is not currently surfaced on the transaction response. Add an optional `scheduled_date: Optional[date]` field to `TransactionResponse`, populated only for `type = "predicted"` transactions by joining to `prediction_instances` on `transaction_id`.
+- Frontend display locations (for `type = "predicted"` rows where `scheduled_date ≠ transaction_date`):
+  - **Recent Chronicles** — secondary meta line: append `"(for {scheduled_date})"` after existing meta
+  - **Chronicles page** — same secondary meta line treatment
+  - **Edit modal** — show scheduled date as a read-only info line if it differs from transaction date
+- Cleanup: after this is implemented, clear the `subcategory` (and `subcategory_id`) field on the affected "In lieu of…" transactions via a one-time data fix (not a migration — just a manual SQL UPDATE or admin endpoint).
+
+**Mark complete:** `[ ] 9.18 - Show original scheduled date when a prediction instance was confirmed on a different date`
 
 ---
 

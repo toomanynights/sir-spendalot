@@ -17,6 +17,7 @@ class TransactionType(str, Enum):
 class TransactionCreate(BaseModel):
     account_id: int
     category_id: Optional[int] = None
+    subcategory_id: Optional[int] = None
     subcategory: Optional[str] = Field(None, max_length=100)
     # Positive = expense (reduces balance), negative = income (increases balance)
     amount: Decimal = Field(..., decimal_places=2)
@@ -29,6 +30,7 @@ class TransactionCreate(BaseModel):
 
 class TransactionUpdate(BaseModel):
     category_id: Optional[int] = None
+    subcategory_id: Optional[int] = None
     subcategory: Optional[str] = Field(None, max_length=100)
     amount: Optional[Decimal] = Field(None, decimal_places=2)
     transaction_date: Optional[date] = None
@@ -44,6 +46,7 @@ class TransactionResponse(BaseModel):
     id: int
     account_id: int
     category_id: Optional[int]
+    subcategory_id: Optional[int] = None
     subcategory: Optional[str]
     amount: Decimal
     transaction_date: date

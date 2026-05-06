@@ -66,6 +66,7 @@ def _validate_fks(
     account_id: Optional[int],
     category_id: Optional[int],
     payment_method_id: Optional[int],
+    subcategory_id: Optional[int] = None,
 ) -> None:
     if account_id is not None and not db.get(Account, account_id):
         raise HTTPException(
@@ -79,13 +80,53 @@ def _validate_fks(
         raise HTTPException(
             status_code=422, detail=f"Payment method {payment_method_id} not found."
         )
+    if subcategory_id is not None and not db.get(Category, subcategory_id):
+        raise HTTPException(
+            status_code=422, detail=f"Subcategory {subcategory_id} not found."
+        )
 
 
-def _build_transaction(data: TransactionCreate) -> Transaction:
+def _resolve_subcategory(
+    db: Session,
+    category_id: Optional[int],
+    subcategory_id: Optional[int],
+    subcategory_text: Optional[str],
+) -> tuple[Optional[int], Optional[str]]:
+    """Normalise the subcategory_id / subcategory text pair into a consistent state.
+
+    Rules:
+    - subcategory_id provided → mirror its name into the text field.
+    - text only → look up matching child under category_id; link if found.
+    - both provided → validate they agree; subcategory_id wins.
+    - neither → both stay None.
+    """
+    if subcategory_id is not None:
+        child = db.get(Category, subcategory_id)
+        if not child:
+            raise HTTPException(status_code=422, detail=f"Subcategory {subcategory_id} not found.")
+        return subcategory_id, child.name
+
+    text = (subcategory_text or "").strip() or None
+    if text is None or category_id is None:
+        return None, text
+
+    match = (
+        db.query(Category)
+        .filter(Category.parent_id == category_id, Category.name.ilike(text))
+        .first()
+    )
+    return (match.id if match else None), text
+
+
+def _build_transaction(data: TransactionCreate, db: Session) -> Transaction:
+    sid, stext = _resolve_subcategory(
+        db, data.category_id, data.subcategory_id, data.subcategory
+    )
     return Transaction(
         account_id=data.account_id,
         category_id=data.category_id,
-        subcategory=data.subcategory,
+        subcategory_id=sid,
+        subcategory=stext,
         amount=data.amount,
         transaction_date=data.transaction_date,
         type=data.type,
@@ -108,6 +149,7 @@ def get_transactions(
     account_id: Optional[int] = None,
     category_id: Optional[int] = None,
     subcategory: Optional[str] = None,
+    subcategory_id: Optional[int] = None,
     transaction_type: Optional[str] = None,
     payment_method_id: Optional[int] = None,
     include_deleted: bool = False,
@@ -137,6 +179,8 @@ def get_transactions(
             q = q.filter(Transaction.category_id == category_id)
     if subcategory is not None:
         q = q.filter(Transaction.subcategory.ilike(f"%{subcategory}%"))
+    if subcategory_id is not None:
+        q = q.filter(Transaction.subcategory_id == subcategory_id)
     if transaction_type is not None:
         q = q.filter(Transaction.type == transaction_type)
     if payment_method_id is not None:
@@ -156,14 +200,14 @@ def get_transaction(db: Session, transaction_id: int) -> TransactionResponse:
 
 
 def create_transaction(db: Session, data: TransactionCreate) -> TransactionResponse:
-    _validate_fks(db, data.account_id, data.category_id, data.payment_method_id)
+    _validate_fks(db, data.account_id, data.category_id, data.payment_method_id, data.subcategory_id)
     _validate_deed_requirements(
         db,
         tx_type=data.type.value,
         payment_method_id=data.payment_method_id,
         subcategory=data.subcategory,
     )
-    tx = _build_transaction(data)
+    tx = _build_transaction(data, db)
     db.add(tx)
     db.commit()
     db.refresh(tx)
@@ -174,7 +218,7 @@ def create_transactions_batch(
     db: Session, data: TransactionBatchCreate
 ) -> list[TransactionResponse]:
     for item in data.transactions:
-        _validate_fks(db, item.account_id, item.category_id, item.payment_method_id)
+        _validate_fks(db, item.account_id, item.category_id, item.payment_method_id, item.subcategory_id)
         _validate_deed_requirements(
             db,
             tx_type=item.type.value,
@@ -182,7 +226,7 @@ def create_transactions_batch(
             subcategory=item.subcategory,
         )
 
-    transactions = [_build_transaction(item) for item in data.transactions]
+    transactions = [_build_transaction(item, db) for item in data.transactions]
     db.add_all(transactions)
     db.commit()
     for tx in transactions:
@@ -201,6 +245,7 @@ def update_transaction(
         account_id=None,
         category_id=updates.get("category_id"),
         payment_method_id=updates.get("payment_method_id"),
+        subcategory_id=updates.get("subcategory_id"),
     )
 
     merged_type = str(updates["type"]) if "type" in updates else str(tx.type)
@@ -214,6 +259,17 @@ def update_transaction(
         payment_method_id=merged_pm,
         subcategory=merged_sub,
     )
+
+    # If subcategory_id or subcategory text is being updated, re-resolve the pair.
+    if "subcategory_id" in updates or "subcategory" in updates:
+        merged_category_id = updates.get("category_id", tx.category_id)
+        merged_sid = updates.get("subcategory_id", tx.subcategory_id)
+        merged_stext = updates.get("subcategory", tx.subcategory)
+        resolved_sid, resolved_stext = _resolve_subcategory(
+            db, merged_category_id, merged_sid, merged_stext
+        )
+        updates["subcategory_id"] = resolved_sid
+        updates["subcategory"] = resolved_stext
 
     for key, value in updates.items():
         setattr(tx, key, value)

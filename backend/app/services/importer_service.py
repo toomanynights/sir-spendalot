@@ -284,10 +284,11 @@ def _ensure_subcategory_exists(
     parent_category_id: int,
     parent_type: str,
     subcategory_name: str | None,
-) -> None:
+) -> int | None:
+    """Ensure a child category entity exists and return its id, or None if name is blank."""
     name = (subcategory_name or "").strip()
     if not name:
-        return
+        return None
     existing = (
         db.query(Category)
         .filter(
@@ -297,15 +298,15 @@ def _ensure_subcategory_exists(
         .first()
     )
     if existing:
-        return
-    db.add(
-        Category(
-            name=name,
-            type=parent_type,
-            parent_id=parent_category_id,
-        )
+        return existing.id
+    new = Category(
+        name=name,
+        type=parent_type,
+        parent_id=parent_category_id,
     )
+    db.add(new)
     db.flush()
+    return new.id
 
 
 def commit_import(db: Session, account_id: int, rows: list[ParsedImportRow], mappings: list[SourceMapping]) -> ImportCommitResponse:
@@ -341,7 +342,7 @@ def commit_import(db: Session, account_id: int, rows: list[ParsedImportRow], map
                         mapping.get("category_name", "Imported"),
                     )
                     subcategory = (mapping.get("subcategory") or "").strip() or None
-                    _ensure_subcategory_exists(
+                    subcategory_id = _ensure_subcategory_exists(
                         db,
                         parent_category_id=parent_category_id,
                         parent_type=tx_type if tx_type in {"daily", "unplanned"} else "unplanned",
@@ -353,6 +354,7 @@ def commit_import(db: Session, account_id: int, rows: list[ParsedImportRow], map
                     tx = Transaction(
                         account_id=account_id,
                         category_id=parent_category_id,
+                        subcategory_id=subcategory_id,
                         amount=(-amount if src_kind == "big_earning" else amount),
                         transaction_date=when,
                         type=tx_type,

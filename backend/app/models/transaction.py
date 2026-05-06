@@ -21,6 +21,9 @@ class Transaction(Base):
     category_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("categories.id"), nullable=True
     )
+    subcategory_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("categories.id", ondelete="RESTRICT"), nullable=True
+    )
     subcategory: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     transaction_date: Mapped[date] = mapped_column(Date, nullable=False)
@@ -44,7 +47,12 @@ class Transaction(Base):
     account: Mapped["Account"] = relationship(
         back_populates="transactions", foreign_keys=[account_id]
     )
-    category: Mapped[Optional["Category"]] = relationship(back_populates="transactions")
+    category: Mapped[Optional["Category"]] = relationship(
+        back_populates="transactions", foreign_keys=[category_id]
+    )
+    subcategory_category: Mapped[Optional["Category"]] = relationship(
+        foreign_keys=[subcategory_id]
+    )
     payment_method: Mapped[Optional["PaymentMethod"]] = relationship(
         back_populates="transactions"
     )

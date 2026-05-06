@@ -109,6 +109,8 @@ export default function QuickEntryForm({
   }
 
   async function ensureSubcategories(plainRows) {
+    // Returns a map of row.id → subcategory_id (int) for rows that have a subcategory.
+    const subcategoryIdByRow = {}
     for (const row of plainRows) {
       const trimmed = row.subcategory?.trim()
       if (!trimmed || !row.parentCategoryId) continue
@@ -116,17 +118,20 @@ export default function QuickEntryForm({
       const deedType = row.deedType
       let cats = qc.getQueryData(CATEGORIES_KEY) || categories || []
       const siblings = cats.filter((c) => c.parent_id === parentId)
-      const exists = siblings.some((c) => c.name.toLowerCase() === trimmed.toLowerCase())
-      if (!exists) {
-        await categoriesApi.create({
+      let match = siblings.find((c) => c.name.toLowerCase() === trimmed.toLowerCase())
+      if (!match) {
+        const created = await categoriesApi.create({
           name: trimmed,
           type: deedType,
           parent_id: parentId,
         })
         await qc.invalidateQueries({ queryKey: CATEGORIES_KEY })
         await qc.refetchQueries({ queryKey: CATEGORIES_KEY })
+        match = created
       }
+      if (match?.id) subcategoryIdByRow[row.id] = match.id
     }
+    return subcategoryIdByRow
   }
 
   async function handleSubmit(e) {
@@ -231,11 +236,12 @@ export default function QuickEntryForm({
     let batchSuccess = true
     if (plainRows.length > 0) {
       try {
-        await ensureSubcategories(plainRows)
+        const subcategoryIdByRow = await ensureSubcategories(plainRows)
         const items = plainRows.map((row) => ({
           amount: (row.direction === 'gain' ? -1 : 1) * Math.abs(parseFloat(row.amount)),
           account_id: selectedId,
           category_id: parseInt(row.parentCategoryId, 10),
+          subcategory_id: subcategoryIdByRow[row.id] ?? null,
           subcategory: row.subcategory?.trim() || null,
           description: row.description?.trim() || null,
           payment_method_id: row.paymentMethodId

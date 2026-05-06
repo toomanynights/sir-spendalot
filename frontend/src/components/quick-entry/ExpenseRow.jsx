@@ -68,6 +68,7 @@ export default function ExpenseRow({
     (c) => !c.parent_id && c.type === row.deedType
   )
   const childCategories = childCategoriesForParent || []
+  const childCategoryNames = [...new Set(childCategories.map((c) => c.name))]
 
   const primarySummary = isPrediction
     ? row.templateName || 'Prediction'
@@ -225,7 +226,7 @@ export default function ExpenseRow({
                 placeholder={row.parentCategoryId ? 'Select or type new…' : 'Pick a category first'}
                 value={row.subcategory}
                 onChange={(val) => onUpdate(row.id, { subcategory: val })}
-                suggestions={childCategories.map((c) => c.name)}
+                suggestions={childCategoryNames}
                 disabled={disabled || !row.parentCategoryId}
               />
             </div>
