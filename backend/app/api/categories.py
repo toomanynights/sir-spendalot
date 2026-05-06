@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
+from app.schemas.category import CategoryCreate, CategoryReassignParentRequest, CategoryReassignRequest, CategoryRenameRequest, CategoryResponse, CategoryUpdate
 from app.services.auth_service import require_auth
 from app.services import category_service
 
@@ -39,6 +39,25 @@ def update_category(
     category_id: int, data: CategoryUpdate, db: Session = Depends(get_db)
 ):
     return category_service.update_category(db, category_id, data)
+
+
+@router.post("/{category_id}/rename", response_model=CategoryResponse)
+def rename_subcategory(category_id: int, data: CategoryRenameRequest, db: Session = Depends(get_db)):
+    return category_service.rename_subcategory(db, category_id, data)
+
+
+@router.post("/{category_id}/reassign-transactions", response_model=dict)
+def reassign_subcategory_transactions(
+    category_id: int, data: CategoryReassignRequest, db: Session = Depends(get_db)
+):
+    return category_service.reassign_subcategory_transactions(db, category_id, data)
+
+
+@router.post("/{category_id}/reassign-parent-transactions", response_model=dict)
+def reassign_parent_transactions(
+    category_id: int, data: CategoryReassignParentRequest, db: Session = Depends(get_db)
+):
+    return category_service.reassign_parent_transactions(db, category_id, data)
 
 
 @router.delete("/{category_id}", status_code=204)

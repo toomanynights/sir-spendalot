@@ -17,6 +17,15 @@ export const categoriesApi = {
   update: (id, data) =>
     api.patch(`/categories/${id}`, data),
 
+  rename: (id, name) =>
+    api.post(`/categories/${id}/rename`, { name }),
+
+  reassignTransactions: (id, targetSubcategoryId) =>
+    api.post(`/categories/${id}/reassign-transactions`, { target_subcategory_id: targetSubcategoryId ?? null }),
+
+  reassignParentTransactions: (id, targetCategoryId) =>
+    api.post(`/categories/${id}/reassign-parent-transactions`, { target_category_id: targetCategoryId ?? null }),
+
   delete: (id) =>
     api.delete(`/categories/${id}`),
 }

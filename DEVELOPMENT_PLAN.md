@@ -93,7 +93,7 @@
 - [ ] 9.8 - Implement PWA support
 - [x] 9.9 - Optional normalized subcategory model (`subcategory_id`) with backward-compatible text fallback
 - [x] 9.10 - Color-code (expenses vs earnings) "Future Prophecies" block (Dashboard) + Prophecies Awaiting (Quick entry)
-- [ ] 9.11 - Category management (reassign/remove subcategory parent; allow renaming subcategories; change subcategory text in transactions when subcategory is renamed...)
+- [x] 9.11 - Category management (reassign/remove subcategory parent; allow renaming subcategories; change subcategory text in transactions when subcategory is renamed...)
 - [x] 9.12 - Treasury layout: introduce scrollong when >5 items
 - [ ] 9.13 - Column layout is not pretty, especially when one of the cards is too tall
 - [ ] 9.14 - allow rescheduling an instance, avoiding its regeneration despite changed date
@@ -101,6 +101,7 @@
 - [x] 9.16 - Tooltips (i.e. on reconciliation screen) don't work on mobile - the same issue was with suggection lists, was resolved with custom suggestions
 - [x] 9.17 - Show transfer direction in Recent Chronicles
 - [ ] 9.18 - Show original scheduled date when a prediction instance was confirmed on a different date
+- [ ] 9.19 - Texts revision
 
 ### Phase 10: Rolling predictions ✅ / ❌
 - [x] 10.0 - Feature initiation (see specs)
@@ -2514,6 +2515,72 @@ A few things to start off (consider them to be discussion points rather than ord
 
 ---
 
+### Task 9.11: Category management
+
+**What:** Full management UI for subcategories in the Treasury — rename, re-parent, and delete. Cascade rename to transaction text. Block deletion when transactions are linked via `subcategory_id`.
+
+**Why:** Now that `subcategory_id` is a proper FK (9.9), subcategory entities are first-class and need management tooling. The RESTRICT FK means deletion is already blocked at the DB level; the UI must surface this gracefully and offer reassignment as the resolution path.
+
+**Scope:**
+
+#### Backend
+
+- New endpoint: `POST /api/categories/{id}/rename`
+  - Body: `{ "name": str }`
+  - Updates `categories.name`.
+  - Cascades: `UPDATE transactions SET subcategory = :new_name WHERE subcategory_id = :id` — keeps the mirrored text in sync.
+  - Validates: name non-empty, max 100 chars; name not already taken by a sibling under the same parent (case-insensitive).
+  - Returns: `CategoryResponse`.
+
+- New endpoint: `POST /api/categories/{id}/reassign-parent`
+  - Body: `{ "parent_id": int | null }`
+  - Moves a child category to a different parent, or promotes it to top-level (`parent_id = null`).
+  - Validates: target parent exists and is itself top-level (max 1 level rule); target parent is same `type`; category being moved has no children of its own.
+  - Does NOT touch transaction text or `subcategory_id` — the FK stays valid.
+  - Returns: `CategoryResponse`.
+
+- Extend `DELETE /api/categories/{id}` for subcategories:
+  - Currently blocks if any `transactions.category_id` references the category.
+  - Add: also block if any `transactions.subcategory_id` references the category (already enforced by RESTRICT FK, but surface a clear error message: "Cannot delete: N transaction(s) use this subcategory. Reassign them first.").
+  - New endpoint: `POST /api/categories/{id}/reassign-transactions`
+    - Body: `{ "target_subcategory_id": int | null }`
+    - Moves all transactions with `subcategory_id = id` to `target_subcategory_id` (and mirrors the target's name into `subcategory` text, or clears text if null).
+    - Intended use: call this before deleting a subcategory.
+    - Returns: `{ "updated": int }` (count of affected transactions).
+
+#### Frontend — Treasury categories section
+
+Subcategories are currently shown as a read-only bulleted list inside each parent category row. Replace that with an entity-aware list using the actual child `Category` records (from the existing `GET /api/categories` response, filtered by `parent_id`).
+
+- Each subcategory row shows:
+  - Name
+  - Transaction count (derived from `subcategory_id` usage — add a `tx_count` field to `CategoryResponse`, populated server-side as count of non-deleted transactions where `subcategory_id = id`)
+  - Rename button (pencil) → inline or modal rename
+  - Delete button (trash) → confirmation; if blocked (tx_count > 0), show reassign flow instead
+
+- Rename flow:
+  - Inline edit or small modal with a single name field.
+  - On save: call `POST /api/categories/{id}/rename`.
+  - Refresh categories list and subcategory usage after.
+
+- Delete flow:
+  - If `tx_count = 0`: confirm dialog → `DELETE /api/categories/{id}`.
+  - If `tx_count > 0`: block deletion with message "N chronicles use this subcategory." Show a "Reassign & delete" path:
+    - Dropdown to pick a replacement subcategory (siblings under same parent) or "None" (clears subcategory link).
+    - On confirm: call `POST /api/categories/{id}/reassign-transactions`, then `DELETE /api/categories/{id}`.
+
+- Re-parent: not exposed in UI for this task — the reassign-parent endpoint is backend-only for now (used by 9.11 backend tests / future UI). Can be revisited in a later task.
+
+- Parent category rename/delete: already works via existing `PATCH /api/categories/{id}` and `DELETE`. No change needed there except ensuring the delete check also covers `subcategory_id` references on child categories' transactions.
+
+#### Schema addition
+
+- `CategoryResponse`: add `tx_count: int = 0` — count of non-deleted transactions where `subcategory_id = id` (for child categories) or `category_id = id` (for parent categories, already covered by existing delete guard). Populated in `get_categories` via a single aggregation query.
+
+**Mark complete:** `[x] 9.11 - Category management (reassign/remove subcategory parent; allow renaming subcategories; change subcategory text in transactions when subcategory is renamed...)`
+
+---
+
 ### Task 9.10: Color-code Future Prophecies / Prophecies Awaiting
 
 **What:** Add income/expense color-coding in prophecy list blocks to match transaction semantics.
@@ -2629,6 +2696,18 @@ A few things to start off (consider them to be discussion points rather than ord
 - Cleanup: after this is implemented, clear the `subcategory` (and `subcategory_id`) field on the affected "In lieu of…" transactions via a one-time data fix (not a migration — just a manual SQL UPDATE or admin endpoint).
 
 **Mark complete:** `[ ] 9.18 - Show original scheduled date when a prediction instance was confirmed on a different date`
+
+---
+
+### Task 9.19: Texts revision
+
+Check user-facing texts across the project:
+- Find discrepancies in terms usage (i.e. "strike"/"delete"), report to user
+- See where the texts don't use the medieval lingo when it would make sense, suggest replacements
+- Create a document with project's glossary (where and which terms should be used instead of default ones)
+- 
+
+**Mark complete:** `[ ] 9.19 - Texts revision`
 
 ---
 

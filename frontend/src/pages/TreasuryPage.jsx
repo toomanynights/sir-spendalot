@@ -231,12 +231,262 @@ function NamePromptModal({ title, initialName, onClose, onSave, noun, onAfterSav
   )
 }
 
+// Modal wrapper shared by category modals
+function CategoryModal({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+      <div className="w-full max-w-md rounded-lg border border-gold/30 shadow-card bg-brown-dark">
+        <div className="card-header">
+          <h3 className="card-title">{title}</h3>
+          <Button variant="ghost" className="ml-auto" onClick={onClose} aria-label="Close"><X size={18} /></Button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// Edit a subcategory: rename and/or move to a different parent
+function SubcategoryEditModal({ subcategory, allCategories, onClose, onAfterSave }) {
+  const [name, setName] = useState(subcategory.name)
+  const [parentId, setParentId] = useState(String(subcategory.parent_id))
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const parentOptions = allCategories
+    .filter((c) => !c.parent_id && c.type === subcategory.type)
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  async function handleSave(e) {
+    e.preventDefault()
+    setError('')
+    setSaving(true)
+    try {
+      const trimmed = name.trim()
+      const newParentId = parseInt(parentId, 10)
+      // If parent changed, use reassign-parent endpoint on the subcategory entity
+      if (newParentId !== subcategory.parent_id) {
+        await categoriesApi.update(subcategory.id, { parent_id: newParentId })
+      }
+      // If name changed, use rename endpoint (handles cascade)
+      if (trimmed !== subcategory.name) {
+        await categoriesApi.rename(subcategory.id, trimmed)
+      }
+      if (onAfterSave) await onAfterSave()
+      onClose()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Hark! The subcategory could not be saved.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <CategoryModal title={`Edit subcategory — ${subcategory.name}`} onClose={onClose}>
+      <form className="card-body space-y-4" onSubmit={handleSave}>
+        <label className="block">
+          <span className="input-label">Name</span>
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} required />
+        </label>
+        <label className="block">
+          <span className="input-label">Parent category</span>
+          <select className="input" value={parentId} onChange={(e) => setParentId(e.target.value)}>
+            {parentOptions.map((p) => (
+              <option key={p.id} value={String(p.id)}>{p.name}</option>
+            ))}
+          </select>
+        </label>
+        {error ? <p className="text-sm text-danger font-crimson">{error}</p> : null}
+        <div className="flex gap-2">
+          <Button type="submit" variant="primary" disabled={saving}>Save</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+        </div>
+      </form>
+    </CategoryModal>
+  )
+}
+
+// Delete a subcategory that has linked transactions: reassign first
+function SubcategoryDeleteModal({ subcategory, siblings, onClose, onAfterSave }) {
+  const [targetId, setTargetId] = useState('')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const replacements = siblings.filter((s) => s.id !== subcategory.id)
+
+  async function handleConfirm() {
+    setError('')
+    setSaving(true)
+    try {
+      await categoriesApi.reassignTransactions(subcategory.id, targetId ? parseInt(targetId, 10) : null)
+      await categoriesApi.delete(subcategory.id)
+      if (onAfterSave) await onAfterSave()
+      onClose()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Hark! The subcategory could not be struck from the ledger.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <CategoryModal title={`Delete subcategory — ${subcategory.name}`} onClose={onClose}>
+      <div className="card-body space-y-4 font-crimson">
+        <p className="text-parchment text-sm">
+          <span className="text-danger font-semibold">{subcategory.tx_count}</span> chronicle(s) bear this subcategory. Reassign them ere it may be struck.
+        </p>
+        <label className="block">
+          <span className="input-label">Reassign to</span>
+          <select className="input" value={targetId} onChange={(e) => setTargetId(e.target.value)}>
+            <option value="">— Remove subcategory from chronicles —</option>
+            {replacements.map((s) => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
+          </select>
+        </label>
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
+        <div className="flex gap-2">
+          <Button type="button" variant="danger" disabled={saving} onClick={handleConfirm}>
+            {saving ? 'Working…' : 'Reassign & strike'}
+          </Button>
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+        </div>
+      </div>
+    </CategoryModal>
+  )
+}
+
+// Edit a parent category: rename and/or demote to subcategory
+function ParentCategoryEditModal({ category, allCategories, onClose, onAfterSave }) {
+  const [name, setName] = useState(category.name)
+  const [parentId, setParentId] = useState('')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const children = allCategories.filter((c) => c.parent_id === category.id)
+  const emptyChildren = children.filter((c) => c.tx_count === 0)
+  const hasNonEmptyChildren = children.some((c) => c.tx_count > 0)
+
+  const parentOptions = allCategories
+    .filter((c) => !c.parent_id && c.type === category.type && c.id !== category.id)
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  const willDemote = parentId !== ''
+
+  async function handleSave(e) {
+    e.preventDefault()
+    setError('')
+    if (willDemote && hasNonEmptyChildren) {
+      setError('Cannot demote: some subcategories still hold chronicles. Reassign or strike them first.')
+      return
+    }
+    if (willDemote && emptyChildren.length > 0) {
+      if (!window.confirm(`Demoting will strike ${emptyChildren.length} empty subcategorie(s): ${emptyChildren.map((c) => c.name).join(', ')}. Dost thou wish to proceed?`)) return
+    }
+    setSaving(true)
+    try {
+      const trimmed = name.trim()
+      if (willDemote) {
+        // Delete empty children first so backend allows the demotion
+        for (const child of emptyChildren) {
+          await categoriesApi.delete(child.id)
+        }
+        await categoriesApi.update(category.id, { parent_id: parseInt(parentId, 10), name: trimmed })
+      } else if (trimmed !== category.name) {
+        await categoriesApi.update(category.id, { name: trimmed })
+      }
+      if (onAfterSave) await onAfterSave()
+      onClose()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Hark! The category could not be saved.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <CategoryModal title={`Edit category — ${category.name}`} onClose={onClose}>
+      <form className="card-body space-y-4" onSubmit={handleSave}>
+        <label className="block">
+          <span className="input-label">Name</span>
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} required />
+        </label>
+        {parentOptions.length > 0 ? (
+          <label className="block">
+            <span className="input-label">Make subcategory of</span>
+            <select className="input" value={parentId} onChange={(e) => setParentId(e.target.value)}>
+              <option value="">— Remains a sovereign category —</option>
+              {parentOptions.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
+            </select>
+            {willDemote && hasNonEmptyChildren ? (
+              <p className="text-xs text-danger mt-1 font-crimson">Cannot demote: subcategories still hold chronicles.</p>
+            ) : willDemote && emptyChildren.length > 0 ? (
+              <p className="text-xs text-gold-muted mt-1 font-crimson">{emptyChildren.length} empty subcategorie(s) shall be struck upon demoting.</p>
+            ) : null}
+          </label>
+        ) : null}
+        {error ? <p className="text-sm text-danger font-crimson">{error}</p> : null}
+        <div className="flex gap-2">
+          <Button type="submit" variant="primary" disabled={saving || (willDemote && hasNonEmptyChildren)}>Save</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+        </div>
+      </form>
+    </CategoryModal>
+  )
+}
+
+// Delete a parent category that has linked transactions: reassign first
+function ParentCategoryDeleteModal({ category, allCategories, onClose, onAfterSave }) {
+  const [targetId, setTargetId] = useState('')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const replacements = allCategories.filter(
+    (c) => !c.parent_id && c.type === category.type && c.id !== category.id
+  ).sort((a, b) => a.name.localeCompare(b.name))
+
+  async function handleConfirm() {
+    setError('')
+    setSaving(true)
+    try {
+      await categoriesApi.reassignParentTransactions(category.id, targetId ? parseInt(targetId, 10) : null)
+      await categoriesApi.delete(category.id)
+      if (onAfterSave) await onAfterSave()
+      onClose()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Hark! The category could not be struck from the ledger.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <CategoryModal title={`Delete category — ${category.name}`} onClose={onClose}>
+      <div className="card-body space-y-4 font-crimson">
+        <p className="text-parchment text-sm">
+          <span className="text-danger font-semibold">{category.tx_count}</span> chronicle(s) are filed under this category. Reassign them ere it may be struck.
+        </p>
+        <label className="block">
+          <span className="input-label">Reassign chronicles to</span>
+          <select className="input" value={targetId} onChange={(e) => setTargetId(e.target.value)}>
+            <option value="">— Remove category from chronicles —</option>
+            {replacements.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+          </select>
+        </label>
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
+        <div className="flex gap-2">
+          <Button type="button" variant="danger" disabled={saving} onClick={handleConfirm}>
+            {saving ? 'Working…' : 'Reassign & strike'}
+          </Button>
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+        </div>
+      </div>
+    </CategoryModal>
+  )
+}
+
 export default function TreasuryPage() {
   const queryClient = useQueryClient()
   const [accounts, setAccounts] = useState([])
   const [categories, setCategories] = useState([])
   const [paymentMethods, setPaymentMethods] = useState([])
-  const [subcatUsage, setSubcatUsage] = useState({})
   const [loadError, setLoadError] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -248,24 +498,25 @@ export default function TreasuryPage() {
   const [correctionAccount, setCorrectionAccount] = useState(null)
   const [transferFrom, setTransferFrom] = useState(null)
   const [checkupAccount, setCheckupAccount] = useState(null)
-  const [categoryModal, setCategoryModal] = useState(null)
   const [newCategoryOpen, setNewCategoryOpen] = useState(false)
+  const [parentEditModal, setParentEditModal] = useState(null)
+  const [parentDeleteModal, setParentDeleteModal] = useState(null)
+  const [subcategoryEditModal, setSubcategoryEditModal] = useState(null)
+  const [subcategoryDeleteModal, setSubcategoryDeleteModal] = useState(null)
   const [pmModal, setPmModal] = useState(null)
   const [newPmOpen, setNewPmOpen] = useState(false)
 
   const loadAll = useCallback(async () => {
     setLoadError('')
     try {
-      const [acc, cat, pm, usage] = await Promise.all([
+      const [acc, cat, pm] = await Promise.all([
         accountsApi.list(),
         categoriesApi.list(),
         paymentMethodsApi.list(),
-        categoriesApi.subcategoryUsage(),
       ])
       setAccounts(acc)
       setCategories(cat)
       setPaymentMethods(pm)
-      setSubcatUsage(usage && typeof usage === 'object' ? usage : {})
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : 'Failed to load Treasury.')
     } finally {
@@ -482,37 +733,62 @@ export default function TreasuryPage() {
             </div>
             <div className="treasury-scroll-list space-y-3">
               {parentCategories.map((cat) => {
-                const subs = subcatUsage[String(cat.id)] || []
+                const childCats = categories.filter((c) => c.parent_id === cat.id).sort((a, b) => a.name.localeCompare(b.name))
                 const open = expandedCats.has(cat.id)
                 return (
                   <div key={cat.id} className="treasury-row items-start">
                     <div className="min-w-0 flex-1">
-                      <p className="text-parchment font-semibold font-cinzel truncate">{cat.name}</p>
-                      {subs.length > 0 ? (
+                      <div className="flex items-center gap-1">
+                        <p className="text-parchment font-semibold font-cinzel truncate flex-1">{cat.name}</p>
+                        <Button type="button" variant="ghost" className="!px-1.5 !py-0.5 shrink-0" title="Edit" onClick={() => setParentEditModal(cat)}>
+                          <Pencil size={15} />
+                        </Button>
+                        <Button type="button" variant="ghost" className="!px-1.5 !py-0.5 shrink-0 text-danger/80" title="Delete" onClick={() => {
+                          if (cat.tx_count > 0) {
+                            setParentDeleteModal(cat)
+                          } else {
+                            handleDeleteCategory(cat)
+                          }
+                        }}>
+                          <Trash2 size={15} />
+                        </Button>
+                      </div>
+                      {childCats.length > 0 ? (
                         <div className="treasury-subcats">
                           <button type="button" className="flex items-center gap-1 text-left w-full" onClick={() => toggleCatExpand(cat.id)}>
                             {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                            <span>Subcategories in use ({subs.length})</span>
+                            <span>Subcategories ({childCats.length})</span>
                           </button>
                           {open ? (
-                            <ul className="mt-2 list-disc pl-4 space-y-0.5">
-                              {subs.map((s) => (
-                                <li key={s}>{s}</li>
+                            <ul className="mt-2 space-y-1">
+                              {childCats.map((sub) => (
+                                <li key={sub.id} className="flex items-center justify-between gap-2">
+                                  <span className="text-parchment/90 text-sm font-crimson truncate">
+                                    {sub.name}
+                                    {sub.tx_count > 0 ? <span className="text-gold-muted ml-1">({sub.tx_count})</span> : null}
+                                  </span>
+                                  <span className="flex gap-1 shrink-0">
+                                    <Button type="button" variant="ghost" className="!px-1 !py-0.5" title="Edit" onClick={() => setSubcategoryEditModal(sub)}>
+                                      <Pencil size={14} />
+                                    </Button>
+                                    <Button type="button" variant="ghost" className="!px-1 !py-0.5 text-danger/80" title="Delete" onClick={() => {
+                                      if (sub.tx_count > 0) {
+                                        setSubcategoryDeleteModal({ sub, siblings: childCats })
+                                      } else {
+                                        handleDeleteCategory(sub)
+                                      }
+                                    }}>
+                                      <Trash2 size={14} />
+                                    </Button>
+                                  </span>
+                                </li>
                               ))}
                             </ul>
                           ) : null}
                         </div>
                       ) : (
-                        <p className="treasury-subcats border-0 pl-0 mt-1">No subcategories recorded yet.</p>
+                        <p className="treasury-subcats border-0 pl-0 mt-1">No subcategories recorded.</p>
                       )}
-                    </div>
-                    <div className="treasury-actions">
-                      <Button type="button" variant="ghost" className="!px-2" title="Rename" onClick={() => setCategoryModal(cat)}>
-                        <Pencil size={18} />
-                      </Button>
-                      <Button type="button" variant="ghost" className="!px-2 text-danger/80" title="Delete" onClick={() => handleDeleteCategory(cat)}>
-                        <Trash2 size={18} />
-                      </Button>
                     </div>
                   </div>
                 )
@@ -587,14 +863,41 @@ export default function TreasuryPage() {
         />
       ) : null}
 
-      {categoryModal ? (
-        <NamePromptModal
-          key={`edit-cat-${categoryModal.id}`}
-          title={`Rename - ${categoryModal.name}`}
-          initialName={categoryModal.name}
-          noun="category"
-          onClose={() => setCategoryModal(null)}
-          onSave={(name) => categoriesApi.update(categoryModal.id, { name })}
+      {parentEditModal ? (
+        <ParentCategoryEditModal
+          key={`edit-parent-${parentEditModal.id}`}
+          category={parentEditModal}
+          allCategories={categories}
+          onClose={() => setParentEditModal(null)}
+          onAfterSave={refreshAfterMutation}
+        />
+      ) : null}
+
+      {parentDeleteModal ? (
+        <ParentCategoryDeleteModal
+          key={`delete-parent-${parentDeleteModal.id}`}
+          category={parentDeleteModal}
+          allCategories={categories}
+          onClose={() => setParentDeleteModal(null)}
+          onAfterSave={refreshAfterMutation}
+        />
+      ) : null}
+
+      {subcategoryEditModal ? (
+        <SubcategoryEditModal
+          key={`edit-sub-${subcategoryEditModal.id}`}
+          subcategory={subcategoryEditModal}
+          allCategories={categories}
+          onClose={() => setSubcategoryEditModal(null)}
+          onAfterSave={refreshAfterMutation}
+        />
+      ) : null}
+
+      {subcategoryDeleteModal ? (
+        <SubcategoryDeleteModal
+          subcategory={subcategoryDeleteModal.sub}
+          siblings={subcategoryDeleteModal.siblings}
+          onClose={() => setSubcategoryDeleteModal(null)}
           onAfterSave={refreshAfterMutation}
         />
       ) : null}
