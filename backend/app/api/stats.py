@@ -27,9 +27,10 @@ router = APIRouter(
 @router.get("/today", response_model=TodayStatsResponse)
 def get_today_stats(
     account_id: Optional[int] = Query(None, description="Defaults to primary account"),
+    today: Optional[date] = Query(None, description="Client's local date (YYYY-MM-DD); defaults to server UTC date"),
     db: Session = Depends(get_db),
 ):
-    return stats_service.get_today_stats(db, account_id=account_id)
+    return stats_service.get_today_stats(db, account_id=account_id, today=today)
 
 
 @router.get("/spending-by-category", response_model=CategorySpendingResponse)

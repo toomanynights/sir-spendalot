@@ -41,8 +41,8 @@ def _sum_type(db: Session, account_id: int, today: date, transaction_type: str) 
     return Decimal(str(result))
 
 
-def get_today_stats(db: Session, *, account_id: Optional[int] = None) -> TodayStatsResponse:
-    today = date.today()
+def get_today_stats(db: Session, *, account_id: Optional[int] = None, today: Optional[date] = None) -> TodayStatsResponse:
+    today = today or date.today()
 
     # Reuse forecast_service for actual + predicted balance (horizon=1 is enough for today)
     forecast_data = forecast_service.get_forecast(db, account_id=account_id, horizon_days=1)

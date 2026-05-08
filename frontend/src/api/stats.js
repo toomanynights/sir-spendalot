@@ -6,7 +6,7 @@ export const statsApi = {
    * @param {{ account_id?: number }} [params]
    */
   today: (params) =>
-    api.get('/stats/today', params),
+    api.get('/stats/today', { today: new Date().toLocaleDateString('sv'), ...params }),
 
   /** @param {{ date_from: string, date_to: string }} params */
   spendingByCategory: (params) =>
