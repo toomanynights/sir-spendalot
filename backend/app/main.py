@@ -10,6 +10,7 @@ from app.api import (
     categories,
     excluded_days,
     importer,
+    notifications,
     payment_methods,
     predictions,
     settings as settings_api,
@@ -67,6 +68,7 @@ app.include_router(settings_api.router)
 app.include_router(excluded_days.router)
 app.include_router(transfers.router)
 app.include_router(importer.router)
+app.include_router(notifications.router)
 
 
 @app.get("/api/redoc", include_in_schema=False)

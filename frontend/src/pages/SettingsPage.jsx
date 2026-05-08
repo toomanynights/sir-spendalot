@@ -14,6 +14,7 @@ import {
 } from '../hooks/useSettings'
 import { formatDate } from '../utils/format'
 import { importerApi } from '../api/importer'
+import { notificationsApi, settingsApi } from '../api/settings'
 
 const todayStr = () => new Date().toISOString().split('T')[0]
 
@@ -113,9 +114,57 @@ export default function SettingsPage() {
     })
   }, [settings])
 
-  const notificationsSupported = typeof window !== 'undefined' && 'Notification' in window
-  const notificationPermission =
-    notificationsSupported ? Notification.permission : 'unsupported'
+  const pushSupported =
+    typeof window !== 'undefined' &&
+    'serviceWorker' in navigator &&
+    'PushManager' in window
+
+  const [pushSubscription, setPushSubscription] = useState(null)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushError, setPushError] = useState('')
+
+  useEffect(() => {
+    if (!pushSupported) return
+    navigator.serviceWorker.ready.then((reg) => {
+      reg.pushManager.getSubscription().then(setPushSubscription)
+    })
+  }, [pushSupported])
+
+  async function handlePushToggle() {
+    if (!pushSupported) return
+    setPushBusy(true)
+    setPushError('')
+    try {
+      const reg = await navigator.serviceWorker.ready
+      if (pushSubscription) {
+        await pushSubscription.unsubscribe()
+        await notificationsApi.unsubscribe(pushSubscription.endpoint).catch(() => {})
+        setPushSubscription(null)
+      } else {
+        const { vapid_public_key: rawKey } = await settingsApi.getVapidPublicKey()
+        if (!rawKey) {
+          setPushError('Push notifications are not configured on the server.')
+          return
+        }
+        const permission = await Notification.requestPermission()
+        if (permission !== 'granted') {
+          setPushError('Notification permission denied. Allow it in browser settings.')
+          return
+        }
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: rawKey,
+        })
+        const json = sub.toJSON()
+        await notificationsApi.subscribe(json.endpoint, json.keys.p256dh, json.keys.auth)
+        setPushSubscription(sub)
+      }
+    } catch (err) {
+      setPushError(err?.message || 'Push subscription failed.')
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   const sortedExcluded = useMemo(() => {
     const list = excludedDays ?? []
@@ -484,24 +533,44 @@ export default function SettingsPage() {
                   </label>
                 </div>
 
-                {!notificationsSupported &&
-                (notifForm.prediction_notifications_enabled || notifForm.checkup_notifications_enabled) ? (
-                  <p className="text-sm text-danger font-crimson">
-                    This browser does not support the notification API.
-                  </p>
-                ) : null}
-                {(notifForm.prediction_notifications_enabled || notifForm.checkup_notifications_enabled) &&
-                notificationPermission === 'denied' ? (
-                  <p className="text-sm text-danger font-crimson">
-                    Browser notifications are blocked. Allow notifications for this site in browser settings.
-                  </p>
-                ) : null}
                 {notifError ? <p className="text-sm text-danger font-crimson">{notifError}</p> : null}
                 {notifSuccess ? <p className="text-sm text-success font-crimson">Notification settings saved!</p> : null}
 
                 <Button type="submit" variant="primary" disabled={updateSettings.isPending || settingsLoading}>
                   {updateSettings.isPending ? 'Saving...' : 'Save notifications'}
                 </Button>
+
+                <div className="pt-3 border-t border-gold/10 space-y-2">
+                  <p className="text-sm text-gold-muted font-crimson">
+                    <strong className="text-parchment">Push notifications</strong> — fires even when the app is closed (requires PWA install or browser support).
+                  </p>
+                  {pushSupported ? (
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <Button
+                        type="button"
+                        variant={pushSubscription ? 'danger' : 'primary'}
+                        disabled={pushBusy}
+                        onClick={handlePushToggle}
+                      >
+                        {pushBusy
+                          ? 'Working...'
+                          : pushSubscription
+                          ? 'Disable push notifications'
+                          : 'Enable push notifications'}
+                      </Button>
+                      {pushSubscription ? (
+                        <span className="text-sm text-success font-crimson">Push notifications active on this device.</span>
+                      ) : (
+                        <span className="text-sm text-gold-muted font-crimson">Not subscribed on this device.</span>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gold-muted font-crimson italic">
+                      Push notifications are not supported in this browser.
+                    </p>
+                  )}
+                  {pushError ? <p className="text-sm text-danger font-crimson">{pushError}</p> : null}
+                </div>
               </form>
             </CardBody>
           </Card>

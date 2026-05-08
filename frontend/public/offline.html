@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sir Spendalot — Offline</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        background-color: #1a0f0a;
+        color: #f4e4c1;
+        font-family: 'Georgia', serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100svh;
+        padding: 2rem;
+        text-align: center;
+      }
+
+      .scroll {
+        border: 2px solid #d4af37;
+        border-radius: 8px;
+        padding: 2.5rem 2rem;
+        max-width: 420px;
+        background: rgba(45, 24, 16, 0.85);
+        box-shadow: 0 0 32px rgba(212, 175, 55, 0.12);
+      }
+
+      .crest {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        display: block;
+      }
+
+      h1 {
+        font-family: 'Georgia', serif;
+        font-size: 1.5rem;
+        color: #d4af37;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.75rem;
+      }
+
+      p {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: #c9b28a;
+        margin-bottom: 0.5rem;
+      }
+
+      .retry {
+        display: inline-block;
+        margin-top: 1.5rem;
+        padding: 0.6rem 1.5rem;
+        background: transparent;
+        border: 1px solid #d4af37;
+        color: #d4af37;
+        font-family: 'Georgia', serif;
+        font-size: 0.95rem;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background 0.2s;
+      }
+
+      .retry:hover {
+        background: rgba(212, 175, 55, 0.12);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="scroll">
+      <span class="crest">⚔️</span>
+      <h1>Hark! The Realm is Unreachable</h1>
+      <p>Thy connection to the treasury hath been severed.</p>
+      <p>Fear not — thy gold remains safe. Return once the roads are clear.</p>
+      <a class="retry" href="/" onclick="location.reload(); return false;">Try Again</a>
+    </div>
+  </body>
+</html>

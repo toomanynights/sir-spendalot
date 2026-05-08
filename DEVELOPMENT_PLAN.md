@@ -90,7 +90,7 @@
 - [ ] 9.5 - Analytics overhaul
 - [x] 9.6 - add an optional line on top of "Thy Lowest Fortunes" block, showing the date when the account will go below zero (if present)
 - [ ] 9.7 - make "Show predictive features on non-primary accounts" setting actualy work (dashboard + analytics with the same logic as in dashboard)
-- [ ] 9.8 - Implement PWA support
+- [x] 9.8 - Implement PWA support
 - [x] 9.9 - Optional normalized subcategory model (`subcategory_id`) with backward-compatible text fallback
 - [x] 9.10 - Color-code (expenses vs earnings) "Future Prophecies" block (Dashboard) + Prophecies Awaiting (Quick entry)
 - [x] 9.11 - Category management (reassign/remove subcategory parent; allow renaming subcategories; change subcategory text in transactions when subcategory is renamed...)
@@ -102,6 +102,8 @@
 - [x] 9.17 - Show transfer direction in Recent Chronicles
 - [ ] 9.18 - Show original scheduled date when a prediction instance was confirmed on a different date
 - [ ] 9.19 - Texts revision
+- [ ] 9.20 - Bug: prediction sum can't be provided upon submit via Quick entry (see how it's realized in dashboard -> Future Prophecies)
+- [ ] 9.21 - Chronicles: add "Export to CSV" feature
 
 ### Phase 10: Rolling predictions ✅ / ❌
 - [x] 10.0 - Feature initiation (see specs)

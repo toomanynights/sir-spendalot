@@ -60,4 +60,8 @@ def update_settings(db: Session, data: SettingsUpdate) -> SettingsResponse:
     if "prediction_horizon_days" in updates and updates["prediction_horizon_days"] != old_horizon:
         prediction_instance_service.regenerate_all_instances_after_horizon_change(db)
 
+    if "prediction_notifications_time" in updates:
+        from app.scheduler import reschedule_push_notifications
+        reschedule_push_notifications()
+
     return SettingsResponse.model_validate(row)
