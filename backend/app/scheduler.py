@@ -46,7 +46,7 @@ def _push_notification_job() -> None:
             return
 
         today = date.today()
-        accounts = db.query(Account).filter(Account.deleted_at.is_(None)).all()
+        accounts = db.query(Account).all()
         account_name_by_id = {a.id: a.name for a in accounts}
 
         # --- Pending / overdue predictions grouped by account ---
