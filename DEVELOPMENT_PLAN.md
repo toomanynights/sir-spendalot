@@ -116,7 +116,7 @@
 - [ ] 10.7 - Frontend: Forecast/peril tooltip showing rolling budget contribution
 - [ ] 10.8 - Drift detection display in management card
 
-### Phase 11: Mobile layout (note: for every page, analyze if it's possible/worthwhile to transition the page into responsive design, or alternatives preferrable - hide the whole page/parts of content/suggest using desktop/customized mobile view... Some pages/elements already adapted to mobile - "no change needed" is also a valid answer) ✅ / ❌
+### Phase 11: Mobile layout ✅ / ❌
 - [x] 11.1 - General components (sidear, topbar, general page content) - make sure accounts in topbar are one line and slide-able on mobile; pay attention to subcategory suggestions on both dashboard and quick entry (don't seem to work on mobile now)
 - [x] 11.2 - Dashboard page  (make sure the order of cards is the same on mobile as left-to-right on desktop: This Day's Fortune -> Thy Lowest Fortunes -> Record Thy Deed -> Recent Chronicles -> Future Prophecies), floating assistant (make sure a tap on activated assistant deactivates it; also it feels a bit intrusive on mobile now)
 - [x] 11.3 - Quick Entry page
