@@ -145,13 +145,21 @@ export default function QuickEntryForm({
       return
     }
 
-    const withAmount = rows.filter((r) => r.amount.trim() !== '')
-    if (withAmount.length === 0) {
-      setGlobalError('Inscribe at least one amount, or add a row.')
+    const predictionSubmitRows = rows.filter(
+      (r) => r.kind === 'prediction' && r.predictionInstanceId
+    )
+    const plainWithAmount = rows.filter(
+      (r) => r.kind === 'plain' && r.amount.trim() !== ''
+    )
+
+    if (predictionSubmitRows.length === 0 && plainWithAmount.length === 0) {
+      setGlobalError(
+        'Inscribe at least one amount, add a prophecy from above, or add a row.'
+      )
       return
     }
 
-    for (const r of withAmount) {
+    for (const r of plainWithAmount) {
       const parsed = parseFloat(r.amount)
       if (!Number.isFinite(parsed) || parsed <= 0) {
         setRows((prev) =>
@@ -166,7 +174,24 @@ export default function QuickEntryForm({
       }
     }
 
-    for (const r of withAmount) {
+    for (const r of predictionSubmitRows) {
+      const t = r.amount.trim()
+      if (!t) continue
+      const parsed = parseFloat(t)
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        setRows((prev) =>
+          prev.map((row) =>
+            row.id === r.id
+              ? { ...row, submitError: 'Use a positive amount greater than zero.' }
+              : row
+          )
+        )
+        setGlobalError('Some prophecies have an invalid amount (must be positive).')
+        return
+      }
+    }
+
+    for (const r of plainWithAmount) {
       if (r.kind === 'plain' && !r.parentCategoryId) {
         setRows((prev) =>
           prev.map((row) =>
@@ -180,7 +205,7 @@ export default function QuickEntryForm({
       }
     }
 
-    for (const r of withAmount) {
+    for (const r of plainWithAmount) {
       if (r.kind !== 'plain') continue
       if (settings?.require_payment_method && !String(r.paymentMethodId || '').trim()) {
         setRows((prev) =>
@@ -206,8 +231,8 @@ export default function QuickEntryForm({
       }
     }
 
-    const predictionRows = withAmount.filter((r) => r.kind === 'prediction')
-    const plainRows = withAmount.filter((r) => r.kind === 'plain')
+    const predictionRows = predictionSubmitRows
+    const plainRows = plainWithAmount
 
     setSubmitting(true)
 
@@ -215,8 +240,12 @@ export default function QuickEntryForm({
     for (const row of predictionRows) {
       const payload = {
         create_transaction: true,
-        confirmed_amount: Math.abs(parseFloat(row.amount)),
         confirmed_date: row.date,
+      }
+      const trimmedAmt = row.amount.trim()
+      if (trimmedAmt) {
+        const absVal = Math.abs(parseFloat(trimmedAmt))
+        payload.confirmed_amount = Math.round(absVal * 100) / 100
       }
       if (row.paymentMethodId) {
         payload.payment_method_id = parseInt(row.paymentMethodId, 10)

@@ -23,24 +23,37 @@ export function createEmptyRow(defaultPaymentMethodId = '') {
 }
 
 export function canCollapseRow(row) {
-  if (!row.amount?.trim()) return false
+  if (!row.amount?.trim()) {
+    if (
+      row.kind === 'prediction' &&
+      row.predictionInstanceId &&
+      row.scheduledPredictionAmount != null
+    ) {
+      return true
+    }
+    return false
+  }
   if (row.kind === 'prediction') return true
   return Boolean(row.parentCategoryId)
 }
 
 /** @param {object} instance — prediction instance from GET /api/predictions/instances */
 export function createPredictionRow(instance, fallbackPaymentMethodId = '') {
-  const raw = parseFloat(instance.amount)
-  const abs = Number.isFinite(raw) ? Math.abs(raw) : ''
+  const scheduledNum = Number(instance.amount)
+  const hasScheduled = Number.isFinite(scheduledNum)
+  const absNum = hasScheduled ? Math.abs(scheduledNum) : NaN
+  const amountStr = Number.isFinite(absNum) ? String(absNum) : ''
   return {
     id: crypto.randomUUID(),
     kind: 'prediction',
     predictionInstanceId: instance.id,
     templateName: instance.template_name || 'Prediction',
     scheduledDate: instance.scheduled_date,
+    /** Signed prophecy amount from server; used for placeholder + summary when amount is blank. */
+    scheduledPredictionAmount: hasScheduled ? scheduledNum : null,
     deedType: 'predicted',
     direction: 'expense',
-    amount: abs === '' ? '' : String(abs),
+    amount: amountStr,
     date: todayStr(),
     parentCategoryId: '',
     subcategory: '',

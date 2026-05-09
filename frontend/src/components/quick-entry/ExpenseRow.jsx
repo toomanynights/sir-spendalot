@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Trash2, ChevronDown, ChevronRight, ChevronUp, Calendar } from 'lucide-react'
 import { Input, Select, Textarea } from '../ui/Input'
 import { Badge } from '../ui/Badge'
-import { formatDate, formatRelativeDate, formatSigned } from '../../utils/format'
+import { formatAmount, formatDate, formatRelativeDate, formatSigned } from '../../utils/format'
 import { todayStr, canCollapseRow } from './rowUtils'
 import SubcategorySuggestions from '../ui/SubcategorySuggestions'
 
@@ -79,7 +79,14 @@ export default function ExpenseRow({
         .filter(Boolean)
         .join(' · ')
 
-  const numericAmount = Math.abs(parseFloat(row.amount) || 0)
+  const baselinePredictionAbs =
+    isPrediction && row.scheduledPredictionAmount != null
+      ? Math.abs(Number(row.scheduledPredictionAmount))
+      : 0
+  const parsedEntered = parseFloat(row.amount)
+  const numericAmount = Number.isFinite(parsedEntered)
+    ? Math.abs(parsedEntered)
+    : baselinePredictionAbs
   const signedAmount = isPrediction
     ? -numericAmount
     : (row.direction === 'gain' ? numericAmount : -numericAmount)
@@ -284,14 +291,32 @@ export default function ExpenseRow({
       )}
 
       {isPrediction && (
-        <Input
-          label="Date"
-          type="date"
-          max={todayStr()}
-          value={row.date}
-          disabled={disabled}
-          onChange={(e) => onUpdate(row.id, { date: e.target.value })}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            id={`qe-amount-${row.id}`}
+            label="Amount"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0.01"
+            placeholder={
+              row.scheduledPredictionAmount != null
+                ? formatAmount(row.scheduledPredictionAmount)
+                : 'Predicted sum'
+            }
+            value={row.amount}
+            disabled={disabled}
+            onChange={(e) => onUpdate(row.id, { amount: e.target.value, submitError: null })}
+          />
+          <Input
+            label="Date"
+            type="date"
+            max={todayStr()}
+            value={row.date}
+            disabled={disabled}
+            onChange={(e) => onUpdate(row.id, { date: e.target.value })}
+          />
+        </div>
       )}
 
       {isPrediction && (

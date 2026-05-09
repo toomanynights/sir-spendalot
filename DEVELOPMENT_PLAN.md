@@ -102,7 +102,7 @@
 - [x] 9.17 - Show transfer direction in Recent Chronicles
 - [ ] 9.18 - Show original scheduled date when a prediction instance was confirmed on a different date
 - [ ] 9.19 - Texts revision
-- [ ] 9.20 - Bug: prediction sum can't be provided upon submit via Quick entry (see how it's realized in dashboard -> Future Prophecies)
+- [x] 9.20 - Bug: prediction sum can't be provided upon submit via Quick entry (see how it's realized in dashboard -> Future Prophecies)
 - [ ] 9.21 - Chronicles: add "Export to CSV" feature
 
 ### Phase 10: Rolling predictions ✅ / ❌
