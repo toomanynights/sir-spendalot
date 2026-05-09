@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Crown, PiggyBank, Wallet } from 'lucide-react'
 import { accountsApi } from '../api/accounts'
 import { useSelectedAccount } from '../contexts/AccountContext'
@@ -21,6 +21,7 @@ export default function AccountSwitcher() {
   const { data: pendingInstances = [] } = usePredictionInstances({ status: 'pending' })
   const [checkupDueByAccount, setCheckupDueByAccount] = useState({})
   const safeAccounts = accounts || []
+  const scrollRef = useRef(null)
 
   // Primary first, then sorted by id for stable order.
   const sorted = useMemo(() => {
@@ -91,6 +92,15 @@ export default function AccountSwitcher() {
     }
   }, [safeAccounts, settings?.checkup_notification_days])
 
+  useEffect(() => {
+    const container = scrollRef.current
+    if (!container) return
+    const activeBtn = container.querySelector('[aria-selected="true"]')
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'instant' })
+    }
+  }, [selectedId, sorted])
+
   if (!accounts) {
     return <Spinner size="sm" className="mb-6" />
   }
@@ -98,7 +108,7 @@ export default function AccountSwitcher() {
   if (accounts.length === 0) return null
 
   return (
-    <div className="account-switcher-scroll" role="tablist" aria-label="Account switcher">
+    <div ref={scrollRef} className="account-switcher-scroll" role="tablist" aria-label="Account switcher">
       {sorted.map((account) => {
         const isActive = account.id === selectedId
         const isSavings = account.account_type === 'savings'
