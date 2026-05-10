@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Pencil, ScrollText, Trash2, X } from 'lucide-react'
@@ -13,6 +14,7 @@ import {
 } from '../hooks/useTransactions'
 import { Button } from '../components/ui/Button'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
+import SubcategorySuggestions from '../components/ui/SubcategorySuggestions'
 import PageContextHeader from '../components/layout/PageContextHeader'
 import { useSelectedAccount } from '../contexts/AccountContext'
 import { formatAmount, formatDate } from '../utils/format'
@@ -112,9 +114,7 @@ function EditModal({
     transaction_date: tx.transaction_date ?? '',
     parent_category_id: parentIdForCategoryId(categories, tx.category_id),
     description: tx.description ?? '',
-    subcategory_mode: 'listed',
-    subcategory_listed: tx.subcategory ?? '',
-    subcategory_custom: '',
+    subcategory: tx.subcategory ?? '',
   })
 
   const categoryOptions = useMemo(
@@ -132,23 +132,19 @@ function EditModal({
 
   function handleSubmit(e) {
     e.preventDefault()
-    const pickedSubcategory =
-      form.subcategory_mode === 'custom'
-        ? form.subcategory_custom
-        : form.subcategory_listed
     const payload = {
       amount: Number(form.amount),
       transaction_date: form.transaction_date,
       category_id: form.parent_category_id ? Number(form.parent_category_id) : null,
-      subcategory: pickedSubcategory.trim() || null,
+      subcategory: form.subcategory.trim() || null,
       description: form.description.trim() || null,
     }
     onSave(payload)
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="w-full max-w-2xl rounded-lg border border-gold/30 shadow-card bg-brown-dark">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-4">
+      <div className="w-full max-w-2xl rounded-lg border border-gold/30 shadow-card bg-brown-dark my-auto">
         <div className="card-header">
           <h3 className="card-title">Edit Chronicle #{tx.id}</h3>
           <Button
@@ -196,9 +192,6 @@ function EditModal({
                     ...prev,
                     parent_category_id: nextParent,
                     subcategory: '',
-                    subcategory_mode: 'listed',
-                    subcategory_listed: '',
-                    subcategory_custom: '',
                   }))
                 }}
               >
@@ -212,47 +205,13 @@ function EditModal({
             </label>
 
             {form.parent_category_id && (
-              <>
-                <label>
-                  <span className="input-label">Subcategory mode</span>
-                  <select
-                    className="input"
-                    value={form.subcategory_mode}
-                    onChange={(e) => updateField('subcategory_mode', e.target.value)}
-                  >
-                    <option value="listed">From used list</option>
-                    <option value="custom">Type custom</option>
-                  </select>
-                </label>
-                {form.subcategory_mode === 'listed' ? (
-                  <label>
-                    <span className="input-label">Subcategory</span>
-                    <select
-                      className="input"
-                      value={form.subcategory_listed}
-                      onChange={(e) => updateField('subcategory_listed', e.target.value)}
-                    >
-                      <option value="">Any / none</option>
-                      {listedSubcategoryOptions.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : (
-                  <label>
-                    <span className="input-label">Subcategory</span>
-                    <input
-                      className="input"
-                      value={form.subcategory_custom}
-                      onChange={(e) => updateField('subcategory_custom', e.target.value)}
-                      maxLength={100}
-                      placeholder="Type custom subcategory"
-                    />
-                  </label>
-                )}
-              </>
+              <SubcategorySuggestions
+                label="Subcategory"
+                value={form.subcategory}
+                onChange={(val) => updateField('subcategory', val)}
+                suggestions={listedSubcategoryOptions}
+                placeholder="Subcategory (optional)"
+              />
             )}
 
             <label className="md:col-span-2">
@@ -280,7 +239,8 @@ function EditModal({
           </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

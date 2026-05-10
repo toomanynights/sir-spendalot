@@ -261,9 +261,11 @@ def update_transaction(
     )
 
     # If subcategory_id or subcategory text is being updated, re-resolve the pair.
+    # Do NOT fall back to tx.subcategory_id when only text was sent — the old ID
+    # would win in _resolve_subcategory and silently overwrite the new text.
     if "subcategory_id" in updates or "subcategory" in updates:
         merged_category_id = updates.get("category_id", tx.category_id)
-        merged_sid = updates.get("subcategory_id", tx.subcategory_id)
+        merged_sid = updates.get("subcategory_id")  # None if caller didn't send it
         merged_stext = updates.get("subcategory", tx.subcategory)
         resolved_sid, resolved_stext = _resolve_subcategory(
             db, merged_category_id, merged_sid, merged_stext
