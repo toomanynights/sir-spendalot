@@ -122,7 +122,14 @@
 - [x] 11.3 - Quick Entry page
 - [x] 11.4 - Chronicles page
 - [x] 11.5 - Prophecies page
-- [ ] 11.6 - Analytics page
+- [x] 11.6 - Analytics page
+  **Specs:**
+  - Spending Composition card: move Type/Category toggle from CardHeader into CardBody (above chart content) so title has full width
+  - SVG chart tooltips: convert SpendingLineChart, BalanceLineChart, MonthlyGroupedBarChart from SVG-internal tooltips (unreadably tiny when scaled on mobile) to fixed DOM tooltips (same pattern as HorizBarChart trend tooltip); add onTouchStart/onTouchEnd alongside existing onMouseEnter/onMouseLeave
+  - HorizBarChart trend tooltip: clamp `left` to viewport so it doesn't clip on right edge of screen
+  - SpendingLineChart legend: add flex-wrap + gap-y-1 so items wrap gracefully on narrow screens
+  - PeriodControl: center the Previous/date/Next navigation row (currently ml-auto right-aligns when wrapped)
+  - Achievements section: non-breaking space between label and value on the period summary line; remaining lines use flex-wrap layout with whitespace-nowrap on values so they break as a unit
 - [ ] 11.7 - Treasury page
 - [ ] 11.8 - Settings page
 
@@ -2707,7 +2714,8 @@ Check user-facing texts across the project:
 - Find discrepancies in terms usage (i.e. "strike"/"delete"), report to user
 - See where the texts don't use the medieval lingo when it would make sense, suggest replacements
 - Create a document with project's glossary (where and which terms should be used instead of default ones)
-- 
+
+Note: "Thy name..." - I dig that ellipsis, let's use it when appropriate
 
 **Mark complete:** `[ ] 9.19 - Texts revision`
 

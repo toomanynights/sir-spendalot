@@ -140,7 +140,7 @@ function PeriodControl({ periodDays, periodOffset, onChange }) {
   return (
     <Card>
       <CardBody>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="segmented-toggle" role="group" aria-label="Period length">
             {[7, 30, 60, 90].map((d) => (
               <button
@@ -157,7 +157,7 @@ function PeriodControl({ periodDays, periodOffset, onChange }) {
             ))}
           </div>
 
-          <div className="flex items-center gap-1 ml-auto">
+          <div className="flex items-center gap-1 sm:ml-auto">
             <button
               type="button"
               className="btn btn-ghost text-sm flex items-center gap-1"
@@ -289,7 +289,7 @@ export default function AnalyticsPage() {
           {/* ── Spending Composition (tabbed) ── */}
           <Card shimmer>
             <CardHeader title="Spending Composition">
-              <div className="ml-auto segmented-toggle" role="group" aria-label="Composition view">
+              <div className="ml-auto shrink-0 segmented-toggle" role="group" aria-label="Composition view">
                 {[
                   { value: 'type', label: 'Type' },
                   { value: 'category', label: 'Category' },
@@ -416,64 +416,71 @@ export default function AnalyticsPage() {
               ) : (
                 <>
                   {insights.period_total_spending > 0 && (
-                    <p className="text-sm text-parchment">
-                      <span className="text-gold">Period spending:</span>{' '}
-                      <span className="text-danger">{formatAmount(insights.period_total_spending)}</span>
+                    <p className="text-sm text-parchment flex flex-wrap gap-x-1.5 gap-y-0.5">
+                      <span className="whitespace-nowrap">
+                        <span className="text-gold">Period spending:</span>{' '}
+                        <span className="text-danger">{formatAmount(insights.period_total_spending)}</span>
+                      </span>
                       {insights.period_total_gains > 0 && (
                         <>
-                          {' '}&nbsp;·&nbsp;{' '}
-                          <span className="text-gold">Gains:</span>{' '}
-                          <span className="text-success">{formatAmount(insights.period_total_gains)}</span>
-                          {' '}&nbsp;·&nbsp;{' '}
-                          <span className="text-gold">Net:</span>{' '}
-                          <span className={insights.period_net >= 0 ? 'text-success' : 'text-danger'}>
-                            {insights.period_net >= 0 ? '+' : ''}{formatAmount(insights.period_net)}
+                          <span className="text-gold-muted">·</span>
+                          <span className="whitespace-nowrap">
+                            <span className="text-gold">Gains:</span>{' '}
+                            <span className="text-success">{formatAmount(insights.period_total_gains)}</span>
+                          </span>
+                          <span className="text-gold-muted">·</span>
+                          <span className="whitespace-nowrap">
+                            <span className="text-gold">Net:</span>{' '}
+                            <span className={insights.period_net >= 0 ? 'text-success' : 'text-danger'}>
+                              {insights.period_net >= 0 ? '+' : ''}{formatAmount(insights.period_net)}
+                            </span>
                           </span>
                         </>
                       )}
                     </p>
                   )}
-                  <p className="text-sm text-parchment">
-                    <span className="text-gold">Days above 0 balance:</span> {insights.days_above_zero}
+                  <p className="text-sm text-parchment flex flex-wrap items-baseline gap-x-1.5">
+                    <span className="text-gold">Days above 0 balance:</span>
+                    <span className="whitespace-nowrap">{insights.days_above_zero}</span>
                   </p>
-                  <p className="text-sm text-parchment">
-                    <span className="text-gold">Longest streak without unplanned spending:</span>{' '}
-                    {insights.longest_streak_without_unplanned} days
+                  <p className="text-sm text-parchment flex flex-wrap items-baseline gap-x-1.5">
+                    <span className="text-gold">Longest streak without unplanned spending:</span>
+                    <span className="whitespace-nowrap">{insights.longest_streak_without_unplanned} days</span>
                   </p>
                   {insights.days_since_last_overdue_prediction != null && (
-                    <p className="text-sm text-parchment">
-                      <span className="text-gold">Days since last overdue prediction:</span>{' '}
-                      {insights.days_since_last_overdue_prediction}
+                    <p className="text-sm text-parchment flex flex-wrap items-baseline gap-x-1.5">
+                      <span className="text-gold">Days since last overdue prediction:</span>
+                      <span className="whitespace-nowrap">{insights.days_since_last_overdue_prediction}</span>
                     </p>
                   )}
                   {insights.most_expensive_purchase_amount && (
-                    <p className="text-sm text-parchment">
-                      <span className="text-gold">Most expensive unplanned purchase:</span>{' '}
-                      {formatAmount(insights.most_expensive_purchase_amount)} ({insights.most_expensive_purchase_label || '—'})
+                    <p className="text-sm text-parchment flex flex-wrap items-baseline gap-x-1.5">
+                      <span className="text-gold">Most expensive unplanned purchase:</span>
+                      <span className="whitespace-nowrap">{formatAmount(insights.most_expensive_purchase_amount)} ({insights.most_expensive_purchase_label || '—'})</span>
                     </p>
                   )}
                   {insights.biggest_spending_day_amount && (
-                    <p className="text-sm text-parchment">
-                      <span className="text-gold">Biggest spending day:</span>{' '}
-                      {formatAmount(insights.biggest_spending_day_amount)} on {formatDate(insights.biggest_spending_day_date)}
+                    <p className="text-sm text-parchment flex flex-wrap items-baseline gap-x-1.5">
+                      <span className="text-gold">Biggest spending day:</span>
+                      <span className="whitespace-nowrap">{formatAmount(insights.biggest_spending_day_amount)} on {formatDate(insights.biggest_spending_day_date)}</span>
                     </p>
                   )}
                   {insights.most_frequent_payment_method && (
-                    <p className="text-sm text-parchment">
-                      <span className="text-gold">Most frequent payment method:</span>{' '}
-                      {insights.most_frequent_payment_method} ({insights.most_frequent_payment_method_count} times)
+                    <p className="text-sm text-parchment flex flex-wrap items-baseline gap-x-1.5">
+                      <span className="text-gold">Most frequent payment method:</span>
+                      <span className="whitespace-nowrap">{insights.most_frequent_payment_method} ({insights.most_frequent_payment_method_count} times)</span>
                     </p>
                   )}
                   {insights.most_frequent_daily_category && (
-                    <p className="text-sm text-parchment">
-                      <span className="text-gold">Most frequent daily category:</span>{' '}
-                      {insights.most_frequent_daily_category} ({insights.most_frequent_daily_category_count} times)
+                    <p className="text-sm text-parchment flex flex-wrap items-baseline gap-x-1.5">
+                      <span className="text-gold">Most frequent daily category:</span>
+                      <span className="whitespace-nowrap">{insights.most_frequent_daily_category} ({insights.most_frequent_daily_category_count} times)</span>
                     </p>
                   )}
                   {insights.most_frequent_unplanned_category && (
-                    <p className="text-sm text-parchment">
-                      <span className="text-gold">Most frequent unplanned category:</span>{' '}
-                      {insights.most_frequent_unplanned_category} ({insights.most_frequent_unplanned_category_count} times)
+                    <p className="text-sm text-parchment flex flex-wrap items-baseline gap-x-1.5">
+                      <span className="text-gold">Most frequent unplanned category:</span>
+                      <span className="whitespace-nowrap">{insights.most_frequent_unplanned_category} ({insights.most_frequent_unplanned_category_count} times)</span>
                     </p>
                   )}
                 </>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { formatAmount } from '../../utils/format'
 
 const W = 600
@@ -11,6 +11,7 @@ const HIT_R = 11
 
 export default function BalanceLineChart({ points }) {
   const [tooltip, setTooltip] = useState(null)
+  const clearTimer = useRef(null)
 
   const filtered = useMemo(() => (points || []).filter(Boolean), [points])
 
@@ -51,77 +52,100 @@ export default function BalanceLineChart({ points }) {
     return ticks
   }, [paddedMin, paddedRange])
 
-  const tipX = (cx) => cx > W / 2 ? 'right' : 'left'
+  const showTooltip = (point, clientX, clientY) => {
+    if (clearTimer.current) clearTimeout(clearTimer.current)
+    setTooltip({ point, clientX, clientY })
+  }
+
+  const hideTooltip = (delay = 0) => {
+    if (clearTimer.current) clearTimeout(clearTimer.current)
+    if (delay > 0) {
+      clearTimer.current = setTimeout(() => setTooltip(null), delay)
+    } else {
+      setTooltip(null)
+    }
+  }
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      className="w-full"
-      style={{ maxHeight: 180 }}
-      aria-hidden="true"
-      onMouseLeave={() => setTooltip(null)}
-    >
-      {/* Y-axis grid */}
-      {gridTicks.map((v, idx) => {
-        const y = yOf(v)
-        return (
-          <g key={idx}>
-            <line x1={PAD.left} y1={y} x2={PAD.left + CHART_W} y2={y} stroke="rgba(212,175,55,0.1)" strokeWidth="1" />
-            <text x={PAD.left - 4} y={y + 4} textAnchor="end" fill="#8b7355" fontSize="9">
-              {formatAmount(v)}
-            </text>
-          </g>
-        )
-      })}
+    <div className="relative">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full"
+        style={{ maxHeight: 180 }}
+        aria-hidden="true"
+        onMouseLeave={() => hideTooltip()}
+        onTouchEnd={() => hideTooltip(1500)}
+      >
+        {/* Y-axis grid */}
+        {gridTicks.map((v, idx) => {
+          const y = yOf(v)
+          return (
+            <g key={idx}>
+              <line x1={PAD.left} y1={y} x2={PAD.left + CHART_W} y2={y} stroke="rgba(212,175,55,0.1)" strokeWidth="1" />
+              <text x={PAD.left - 4} y={y + 4} textAnchor="end" fill="#8b7355" fontSize="9">
+                {formatAmount(v)}
+              </text>
+            </g>
+          )
+        })}
 
-      {/* Zero line */}
-      {showZeroLine && (
-        <line x1={PAD.left} y1={zeroY} x2={PAD.left + CHART_W} y2={zeroY} stroke="#cd5c5c" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.8" />
-      )}
+        {/* Zero line */}
+        {showZeroLine && (
+          <line x1={PAD.left} y1={zeroY} x2={PAD.left + CHART_W} y2={zeroY} stroke="#cd5c5c" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.8" />
+        )}
 
-      {/* Balance polyline */}
-      <polyline points={polylinePoints} fill="none" stroke="#d4af37" strokeWidth="2" strokeLinejoin="round" />
+        {/* Balance polyline */}
+        <polyline points={polylinePoints} fill="none" stroke="#d4af37" strokeWidth="2" strokeLinejoin="round" />
 
-      {/* Dots + invisible hit targets */}
-      {filtered.map((p, i) => {
-        const cx = xOf(i)
-        const cy = yOf(Number(p.balance))
-        const isNeg = Number(p.balance) < 0
-        return (
-          <g key={p.date}>
-            <circle cx={cx} cy={cy} r={DOT_R} fill={isNeg ? '#cd5c5c' : '#d4af37'} opacity="0.7" />
-            <circle
-              cx={cx} cy={cy} r={HIT_R}
-              fill="transparent"
-              style={{ cursor: 'default' }}
-              onMouseEnter={() => setTooltip({ cx, cy, point: p, side: tipX(cx) })}
-            />
-          </g>
-        )
-      })}
+        {/* Dots + invisible hit targets */}
+        {filtered.map((p, i) => {
+          const cx = xOf(i)
+          const cy = yOf(Number(p.balance))
+          const isNeg = Number(p.balance) < 0
+          return (
+            <g key={p.date}>
+              <circle cx={cx} cy={cy} r={DOT_R} fill={isNeg ? '#cd5c5c' : '#d4af37'} opacity="0.7" />
+              <circle
+                cx={cx} cy={cy} r={HIT_R}
+                fill="transparent"
+                style={{ cursor: 'default' }}
+                onMouseEnter={(e) => showTooltip(p, e.clientX, e.clientY)}
+                onTouchStart={(e) => {
+                  e.preventDefault()
+                  const t = e.touches[0]
+                  showTooltip(p, t.clientX, t.clientY)
+                }}
+              />
+            </g>
+          )
+        })}
 
-      {/* X-axis labels */}
-      {labelIdxs.map((i) => (
-        <text key={filtered[i].date} x={xOf(i)} y={H - 4} textAnchor="middle" fill="#8b7355" fontSize="9">
-          {filtered[i].date.slice(5)}
-        </text>
-      ))}
+        {/* X-axis labels */}
+        {labelIdxs.map((i) => (
+          <text key={filtered[i].date} x={xOf(i)} y={H - 4} textAnchor="middle" fill="#8b7355" fontSize="9">
+            {filtered[i].date.slice(5)}
+          </text>
+        ))}
+      </svg>
 
-      {/* SVG tooltip */}
+      {/* DOM tooltip — readable at any viewport size */}
       {tooltip && (() => {
-        const { cx, cy, point, side } = tooltip
-        const label = `${point.date}  ${formatAmount(Number(point.balance))}`
-        const boxW = label.length * 6.2 + 14
-        const boxH = 20
-        const bx = side === 'right' ? cx - boxW - 8 : cx + 8
-        const by = Math.max(PAD.top, cy - boxH / 2)
+        const TOOLTIP_W = 160
+        const left = Math.min(tooltip.clientX + 12, window.innerWidth - TOOLTIP_W - 8)
+        const top = tooltip.clientY - 10
+        const bal = Number(tooltip.point.balance)
         return (
-          <g pointerEvents="none">
-            <rect x={bx} y={by} width={boxW} height={boxH} rx="3" fill="rgba(26,15,10,0.92)" stroke="rgba(212,175,55,0.4)" strokeWidth="1" />
-            <text x={bx + boxW / 2} y={by + 13} textAnchor="middle" fill="#f4e4c1" fontSize="10">{label}</text>
-          </g>
+          <div
+            className="fixed z-50 pointer-events-none bg-[#1a0f0a] border border-gold/30 rounded px-2 py-1.5 text-xs shadow-lg"
+            style={{ left, top, minWidth: TOOLTIP_W }}
+          >
+            <span className="text-gold">{tooltip.point.date}</span>
+            <span className={`ml-2 font-semibold ${bal < 0 ? 'text-danger' : 'text-parchment'}`}>
+              {formatAmount(bal)}
+            </span>
+          </div>
         )
       })()}
-    </svg>
+    </div>
   )
 }

@@ -113,7 +113,12 @@ export default function HorizBarChart({ rows, trends, onRowClick, expandedLabel:
       {trendTooltip && (
         <div
           className="fixed z-50 pointer-events-none bg-[#1a0f0a] border border-gold/30 rounded px-2 py-1 text-xs text-parchment whitespace-nowrap shadow-lg"
-          style={{ left: trendTooltip.clientX + 12, top: trendTooltip.clientY - 10 }}
+          style={{
+            left: trendTooltip.clientX + 12 + 220 > window.innerWidth
+              ? trendTooltip.clientX - 220 - 4
+              : trendTooltip.clientX + 12,
+            top: trendTooltip.clientY - 10,
+          }}
         >
           <span className={trendTooltip.delta >= 0 ? 'text-danger' : 'text-success'}>
             {trendTooltip.delta >= 0 ? '↗' : '↘'} {Math.abs(trendTooltip.delta).toFixed(1)}%
