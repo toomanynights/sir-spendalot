@@ -169,7 +169,7 @@ export default function QuickEntryForm({
               : row
           )
         )
-        setGlobalError('Some deeds have invalid amount (must be positive).')
+        setGlobalError('Hark! Some deeds bear an invalid amount (must be positive).')
         return
       }
     }
@@ -186,7 +186,7 @@ export default function QuickEntryForm({
               : row
           )
         )
-        setGlobalError('Some prophecies have an invalid amount (must be positive).')
+        setGlobalError('Hark! Some prophecies bear an invalid amount (must be positive).')
         return
       }
     }
@@ -200,7 +200,7 @@ export default function QuickEntryForm({
               : row
           )
         )
-        setGlobalError('Some deeds lack a category.')
+        setGlobalError('Hark! Some deeds lack a category.')
         return
       }
     }
@@ -215,7 +215,7 @@ export default function QuickEntryForm({
               : row
           )
         )
-        setGlobalError('Some deeds lack a payment method (required by realm settings).')
+        setGlobalError('Hark! Some deeds lack a payment method (required by realm settings).')
         return
       }
       if (settings?.require_subcategory && !String(r.subcategory || '').trim()) {
@@ -226,7 +226,7 @@ export default function QuickEntryForm({
               : row
           )
         )
-        setGlobalError('Some deeds lack a subcategory (required by realm settings).')
+        setGlobalError('Hark! Some deeds lack a subcategory (required by realm settings).')
         return
       }
     }

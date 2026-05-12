@@ -294,7 +294,7 @@ export default function RecordDeed() {
             ) : isSuccess ? (
               <><Check size={18} /> Inscribed!</>
             ) : (
-              <><Plus size={18} /> Record Deed</>
+              <><Plus size={18} /> Inscribe Deed</>
             )}
           </Button>
 

@@ -377,7 +377,7 @@ export default function AnalyticsPage() {
 
           {/* ── Monthly Overview ── */}
           <Card shimmer>
-            <CardHeader title="Monthly Overview" />
+            <CardHeader title="Monthly Chronicle" />
             <CardBody>
               {monthlyQuery.isLoading ? (
                 <p className="text-gold-muted font-crimson text-sm">Consulting the chronicles...</p>
@@ -389,7 +389,7 @@ export default function AnalyticsPage() {
 
           {/* ── Balance History ── */}
           <Card shimmer>
-            <CardHeader title="Balance Over Time" />
+            <CardHeader title="Treasury Over Time" />
             <CardBody>
               {balanceQuery.isLoading ? (
                 <p className="text-gold-muted font-crimson text-sm">Loading balance history...</p>

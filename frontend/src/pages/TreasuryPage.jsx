@@ -322,17 +322,17 @@ function SubcategoryDeleteModal({ subcategory, siblings, onClose, onAfterSave })
       if (onAfterSave) await onAfterSave()
       onClose()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Hark! The subcategory could not be struck from the ledger.')
+      setError(err instanceof ApiError ? err.message : 'Hark! The subcategory could not be smote.')
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <CategoryModal title={`Delete subcategory — ${subcategory.name}`} onClose={onClose}>
+    <CategoryModal title={`Smite subcategory — ${subcategory.name}`} onClose={onClose}>
       <div className="card-body space-y-4 font-crimson">
         <p className="text-parchment text-sm">
-          <span className="text-danger font-semibold">{subcategory.tx_count}</span> chronicle(s) bear this subcategory. Reassign them ere it may be struck.
+          <span className="text-danger font-semibold">{subcategory.tx_count}</span> chronicle(s) bear this subcategory. Reassign them ere it may be smote.
         </p>
         <label className="block">
           <span className="input-label">Reassign to</span>
@@ -344,7 +344,7 @@ function SubcategoryDeleteModal({ subcategory, siblings, onClose, onAfterSave })
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         <div className="flex gap-2">
           <Button type="button" variant="danger" disabled={saving} onClick={handleConfirm}>
-            {saving ? 'Working…' : 'Reassign & strike'}
+            {saving ? 'Working…' : 'Reassign & smite'}
           </Button>
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
         </div>
@@ -374,11 +374,11 @@ function ParentCategoryEditModal({ category, allCategories, onClose, onAfterSave
     e.preventDefault()
     setError('')
     if (willDemote && hasNonEmptyChildren) {
-      setError('Cannot demote: some subcategories still hold chronicles. Reassign or strike them first.')
+      setError('Cannot demote: some subcategories still hold chronicles. Reassign or smite them first.')
       return
     }
     if (willDemote && emptyChildren.length > 0) {
-      if (!window.confirm(`Demoting will strike ${emptyChildren.length} empty subcategorie(s): ${emptyChildren.map((c) => c.name).join(', ')}. Dost thou wish to proceed?`)) return
+      if (!window.confirm(`Demoting will smite ${emptyChildren.length} empty subcategorie(s): ${emptyChildren.map((c) => c.name).join(', ')}. Dost thou wish to proceed?`)) return
     }
     setSaving(true)
     try {
@@ -418,7 +418,7 @@ function ParentCategoryEditModal({ category, allCategories, onClose, onAfterSave
             {willDemote && hasNonEmptyChildren ? (
               <p className="text-xs text-danger mt-1 font-crimson">Cannot demote: subcategories still hold chronicles.</p>
             ) : willDemote && emptyChildren.length > 0 ? (
-              <p className="text-xs text-gold-muted mt-1 font-crimson">{emptyChildren.length} empty subcategorie(s) shall be struck upon demoting.</p>
+              <p className="text-xs text-gold-muted mt-1 font-crimson">{emptyChildren.length} empty subcategorie(s) shall be smote upon demoting.</p>
             ) : null}
           </label>
         ) : null}
@@ -451,17 +451,17 @@ function ParentCategoryDeleteModal({ category, allCategories, onClose, onAfterSa
       if (onAfterSave) await onAfterSave()
       onClose()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Hark! The category could not be struck from the ledger.')
+      setError(err instanceof ApiError ? err.message : 'Hark! The category could not be smote.')
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <CategoryModal title={`Delete category — ${category.name}`} onClose={onClose}>
+    <CategoryModal title={`Smite category — ${category.name}`} onClose={onClose}>
       <div className="card-body space-y-4 font-crimson">
         <p className="text-parchment text-sm">
-          <span className="text-danger font-semibold">{category.tx_count}</span> chronicle(s) are filed under this category. Reassign them ere it may be struck.
+          <span className="text-danger font-semibold">{category.tx_count}</span> chronicle(s) are filed under this category. Reassign them ere it may be smote.
         </p>
         <label className="block">
           <span className="input-label">Reassign chronicles to</span>
@@ -473,7 +473,7 @@ function ParentCategoryDeleteModal({ category, allCategories, onClose, onAfterSa
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         <div className="flex gap-2">
           <Button type="button" variant="danger" disabled={saving} onClick={handleConfirm}>
-            {saving ? 'Working…' : 'Reassign & strike'}
+            {saving ? 'Working…' : 'Reassign & smite'}
           </Button>
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
         </div>
@@ -578,32 +578,32 @@ export default function TreasuryPage() {
 
   async function handleDeleteAccount(acc) {
     if (acc.is_primary) return
-    if (!window.confirm(`Delete account "${acc.name}"? This cannot be undone.`)) return
+    if (!window.confirm(`Smite account "${acc.name}"? This cannot be undone.`)) return
     try {
       await accountsApi.delete(acc.id)
       await refreshAfterMutation()
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Delete failed.')
+      window.alert(err instanceof ApiError ? err.message : 'Hark! The smiting hath failed.')
     }
   }
 
   async function handleDeleteCategory(cat) {
-    if (!window.confirm(`Delete category "${cat.name}"?`)) return
+    if (!window.confirm(`Smite category "${cat.name}"?`)) return
     try {
       await categoriesApi.delete(cat.id)
       await refreshAfterMutation()
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Delete failed.')
+      window.alert(err instanceof ApiError ? err.message : 'Hark! The smiting hath failed.')
     }
   }
 
   async function handleDeletePm(pm) {
-    if (!window.confirm(`Delete payment method "${pm.name}"?`)) return
+    if (!window.confirm(`Smite payment method "${pm.name}"?`)) return
     try {
       await paymentMethodsApi.delete(pm.id)
       await refreshAfterMutation()
     } catch (err) {
-      window.alert(err instanceof ApiError ? err.message : 'Delete failed.')
+      window.alert(err instanceof ApiError ? err.message : 'Hark! The smiting hath failed.')
     }
   }
 
@@ -681,7 +681,7 @@ export default function TreasuryPage() {
                           <ArrowLeftRight size={18} />
                         </Button>
                         {!acc.is_primary ? (
-                          <Button type="button" variant="ghost" className="!px-2 text-danger/80 hover:text-danger" title="Delete" onClick={() => handleDeleteAccount(acc)}>
+                          <Button type="button" variant="ghost" className="!px-2 text-danger/80 hover:text-danger" title="Smite" onClick={() => handleDeleteAccount(acc)}>
                             <Trash2 size={18} />
                           </Button>
                         ) : null}
@@ -743,7 +743,7 @@ export default function TreasuryPage() {
                         <Button type="button" variant="ghost" className="!px-1.5 !py-0.5 shrink-0" title="Edit" onClick={() => setParentEditModal(cat)}>
                           <Pencil size={15} />
                         </Button>
-                        <Button type="button" variant="ghost" className="!px-1.5 !py-0.5 shrink-0 text-danger/80" title="Delete" onClick={() => {
+                        <Button type="button" variant="ghost" className="!px-1.5 !py-0.5 shrink-0 text-danger/80" title="Smite" onClick={() => {
                           if (cat.tx_count > 0) {
                             setParentDeleteModal(cat)
                           } else {
@@ -771,7 +771,7 @@ export default function TreasuryPage() {
                                     <Button type="button" variant="ghost" className="!px-1 !py-0.5" title="Edit" onClick={() => setSubcategoryEditModal(sub)}>
                                       <Pencil size={14} />
                                     </Button>
-                                    <Button type="button" variant="ghost" className="!px-1 !py-0.5 text-danger/80" title="Delete" onClick={() => {
+                                    <Button type="button" variant="ghost" className="!px-1 !py-0.5 text-danger/80" title="Smite" onClick={() => {
                                       if (sub.tx_count > 0) {
                                         setSubcategoryDeleteModal({ sub, siblings: childCats })
                                       } else {

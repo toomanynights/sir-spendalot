@@ -375,7 +375,7 @@ export default function SettingsPage() {
       <div className="page-container">
         <div className="flex flex-col gap-6 max-w-3xl w-full">
           <Card shimmer>
-            <CardHeader title="Forecast & Stats" />
+            <CardHeader title="Forecast & Reckoning" />
             <CardBody>
               <form onSubmit={handleSaveSettings} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -466,7 +466,7 @@ export default function SettingsPage() {
 
                 <div className="flex items-center gap-3">
                   <Button type="submit" variant="primary" disabled={updateSettings.isPending || settingsLoading}>
-                    {updateSettings.isPending ? 'Saving...' : 'Save settings'}
+                    {updateSettings.isPending ? 'Sealing...' : 'Seal settings'}
                   </Button>
                   {settingsLoading ? <span className="text-sm text-gold-muted font-crimson">Loading current values...</span> : null}
                 </div>
@@ -669,7 +669,7 @@ export default function SettingsPage() {
           </Card>
 
           <Card shimmer>
-            <CardHeader title="Historical Import" />
+            <CardHeader title="Import the Annals" />
             <CardBody className="space-y-3">
               <p className="card-subtitle">
                 Upload CSV exports, map legacy categories, run dry preview, and commit import.
@@ -690,13 +690,13 @@ export default function SettingsPage() {
               </p>
               <div className="flex flex-wrap gap-2 md:flex-nowrap">
                 <Button onClick={handleBackupDownload} disabled={!!opsBusy}>
-                  Backup user data
+                  Preserve the Annals
                 </Button>
                 <Button variant="ghost" onClick={handleRestoreClick} disabled={!!opsBusy}>
                   Restore
                 </Button>
                 <Button variant="danger" onClick={handleNuke} disabled={!!opsBusy}>
-                  Nuke user data
+                  Raze the Annals
                 </Button>
               </div>
               <input

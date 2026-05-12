@@ -325,7 +325,7 @@ export default function TransactionsPage() {
 
   async function handleDelete(tx) {
     const confirmed = window.confirm(
-      `Soft-delete chronicle #${tx.id} from ${tx.transaction_date}? This hides it from the default list.`
+      `Strike chronicle #${tx.id} from ${tx.transaction_date}? This hides it from the default view.`
     )
     if (!confirmed) return
     await deleteTx.mutateAsync(tx.id)
@@ -492,7 +492,7 @@ export default function TransactionsPage() {
                     checked={includeDeleted}
                     onChange={(e) => setParam('include_deleted', e.target.checked ? 'true' : '')}
                   />
-                  Show deleted items
+                  Show struck chronicles
                 </label>
                 <Button variant="ghost" onClick={clearAllFilters}>
                   Reset filters
@@ -543,7 +543,7 @@ export default function TransactionsPage() {
                           <span className="text-xs text-gold-muted">{formatDate(tx.transaction_date)}</span>
                           <TypeBadge type={tx.type} />
                           {tx.deleted_at && (
-                            <span className="text-xs text-gold-muted">(deleted)</span>
+                            <span className="text-xs text-gold-muted">(struck)</span>
                           )}
                         </div>
                         <p className="text-xs text-gold-muted truncate mt-1">
@@ -572,7 +572,7 @@ export default function TransactionsPage() {
                               className="text-danger min-h-touch min-w-touch p-1.5"
                               onClick={() => handleDelete(tx)}
                               disabled={deleteTx.isPending}
-                              title="Soft-delete chronicle"
+                              title="Strike this chronicle"
                             >
                               <Trash2 size={14} />
                             </Button>
@@ -646,7 +646,7 @@ export default function TransactionsPage() {
                                   className="text-danger"
                                   onClick={() => handleDelete(tx)}
                                   disabled={deleteTx.isPending}
-                                  title="Soft-delete chronicle"
+                                  title="Strike this chronicle"
                                 >
                                   <Trash2 size={16} />
                                 </Button>

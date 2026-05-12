@@ -101,7 +101,7 @@
 - [x] 9.16 - Tooltips (i.e. on reconciliation screen) don't work on mobile - the same issue was with suggection lists, was resolved with custom suggestions
 - [x] 9.17 - Show transfer direction in Recent Chronicles
 - [ ] 9.18 - Show original scheduled date when a prediction instance was confirmed on a different date
-- [ ] 9.19 - Texts revision
+- [x] 9.19 - Texts revision
 - [x] 9.20 - Bug: prediction sum can't be provided upon submit via Quick entry (see how it's realized in dashboard -> Future Prophecies)
 - [ ] 9.21 - Chronicles: add "Export to CSV" feature
 
