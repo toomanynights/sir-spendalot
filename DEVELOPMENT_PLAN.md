@@ -2019,6 +2019,8 @@ Instead, logic of "negative means gain" should remain on backend. For user, the 
 
 - [ ] Items 1–10 implemented
 
+After implementation, add to the appropriate location of the agent rules the instruction to prefer reusing components rather than writing new ones / hardcoding.
+
 **Mark complete:** `[ ] 7.9 - Components reuse`
 
 ---
