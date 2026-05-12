@@ -14,10 +14,13 @@ from app.models.settings import Settings
 from app.models.transaction import Transaction
 from app.schemas.stats import (
     AnalyticsInsightsResponse,
+    BalanceHistoryPoint,
+    BalanceHistoryResponse,
     CategorySpendingResponse,
     CategorySpendingRow,
     CategorySubcategoryResponse,
     CategoryTrendRow,
+    DailyTrendCategoryRow,
     DailyTrendResponse,
     DailyTrendRow,
     MonthlyComparisonResponse,
@@ -294,7 +297,7 @@ def get_spending_by_type(
 
 
 def get_daily_trend(
-    db: Session, *, days: int = 30, account_id: Optional[int] = None
+    db: Session, *, days: int = 30, offset: int = 0, account_id: Optional[int] = None
 ) -> DailyTrendResponse:
     resolved = _resolve_account_id(db, account_id)
     settings_row = db.query(Settings).filter(Settings.id == 1).first()
@@ -305,11 +308,32 @@ def get_daily_trend(
     low_mult = Decimal(str(threshold_low)) / Decimal("100")
 
     today = date.today()
-    start = today - timedelta(days=max(1, days) - 1)
+    end = today - timedelta(days=offset * days)
+    start = end - timedelta(days=max(1, days) - 1)
+
+    # Fetch all daily transactions in the window once, group by date + category
+    window_txs = (
+        db.query(Transaction)
+        .filter(
+            Transaction.account_id == resolved,
+            Transaction.deleted_at.is_(None),
+            Transaction.transaction_date >= start,
+            Transaction.transaction_date <= end,
+            Transaction.type == "daily",
+            Transaction.amount > 0,
+        )
+        .all()
+    )
+    # Build {date: {category: total}}
+    cat_by_date: dict[date, dict[str, Decimal]] = defaultdict(lambda: defaultdict(lambda: Decimal("0")))
+    for tx in window_txs:
+        label = tx.category_name or tx.top_category_name or "Uncategorized"
+        cat_by_date[tx.transaction_date][label] += Decimal(str(tx.amount))
+
     points: list[DailyTrendRow] = []
     for i in range(max(1, days)):
         d = start + timedelta(days=i)
-        spend = _sum_type(db, resolved, d, "daily")
+        spend = _sum_type(db, resolved, d, "daily") if d <= today else Decimal("0")
         if spend <= 0:
             status = "zero"
         elif baseline > 0 and spend >= baseline * high_mult:
@@ -318,12 +342,14 @@ def get_daily_trend(
             status = "low"
         else:
             status = "normal"
+        top_cats = sorted(cat_by_date[d].items(), key=lambda x: x[1], reverse=True)[:3]
         points.append(
             DailyTrendRow(
                 date=d,
                 spending=spend,
                 rolling_average=baseline,
                 status=status,
+                categories=[DailyTrendCategoryRow(category_name=n, total=t) for n, t in top_cats],
             )
         )
 
@@ -545,7 +571,7 @@ def get_analytics_insights(
     )
     previous_map = {row.category_name: row.total for row in previous.categories}
     trends: list[CategoryTrendRow] = []
-    for row in current.categories[:6]:
+    for row in current.categories:
         prev = previous_map.get(row.category_name, Decimal("0"))
         if prev <= 0:
             # Insufficient comparison baseline; skip trend row for this category.
@@ -559,6 +585,15 @@ def get_analytics_insights(
                 delta_percent=delta,
             )
         )
+
+    period_total_spending = Decimal("0")
+    period_total_gains = Decimal("0")
+    for tx in txs:
+        amount = Decimal(str(tx.amount))
+        if amount > 0:
+            period_total_spending += amount
+        elif amount < 0:
+            period_total_gains += -amount
 
     return AnalyticsInsightsResponse(
         account_id=resolved,
@@ -582,4 +617,52 @@ def get_analytics_insights(
         most_frequent_unplanned_category=most_freq_unplanned_category,
         most_frequent_unplanned_category_count=most_freq_unplanned_category_count,
         category_trends=trends,
+        period_total_spending=period_total_spending,
+        period_total_gains=period_total_gains,
+        period_net=period_total_gains - period_total_spending,
+    )
+
+
+def get_balance_history(
+    db: Session, *, days: int = 30, offset: int = 0, account_id: Optional[int] = None
+) -> BalanceHistoryResponse:
+    resolved = _resolve_account_id(db, account_id)
+    account = db.get(Account, resolved)
+    if not account:
+        raise HTTPException(status_code=422, detail=f"Account {resolved} not found.")
+
+    today = date.today()
+    end_date = today - timedelta(days=offset * days)
+    start_date = end_date - timedelta(days=max(1, days) - 1)
+
+    # Fetch all transactions up to end_date to build running balance
+    all_txs = (
+        db.query(Transaction.transaction_date, func.coalesce(func.sum(Transaction.amount), 0))
+        .filter(
+            Transaction.account_id == resolved,
+            Transaction.deleted_at.is_(None),
+            Transaction.transaction_date <= end_date,
+        )
+        .group_by(Transaction.transaction_date)
+        .all()
+    )
+    by_date: dict[date, Decimal] = {d: Decimal(str(v)) for d, v in all_txs}
+
+    # Walk from initial balance to the day before start_date
+    balance = Decimal(str(account.initial_balance))
+    for d in sorted(k for k in by_date if k < start_date):
+        balance -= by_date[d]
+
+    points: list[BalanceHistoryPoint] = []
+    cursor = start_date
+    while cursor <= end_date:
+        balance -= by_date.get(cursor, Decimal("0"))
+        points.append(BalanceHistoryPoint(date=cursor, balance=balance))
+        cursor += timedelta(days=1)
+
+    return BalanceHistoryResponse(
+        account_id=resolved,
+        days=max(1, days),
+        offset=offset,
+        points=points,
     )

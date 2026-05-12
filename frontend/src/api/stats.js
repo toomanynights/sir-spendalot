@@ -31,4 +31,8 @@ export const statsApi = {
   /** @param {{ date_from: string, date_to: string, account_id?: number }} params */
   insights: (params) =>
     api.get('/stats/insights', params),
+
+  /** @param {{ days?: number, offset?: number, account_id?: number }} [params] */
+  balanceHistory: (params) =>
+    api.get('/stats/balance-history', params),
 }

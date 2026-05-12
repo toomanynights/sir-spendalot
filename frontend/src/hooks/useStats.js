@@ -41,11 +41,12 @@ export function useSpendingByType(params) {
   })
 }
 
-export function useDailyTrend(days = 30, accountId) {
+export function useDailyTrend(days = 30, offset = 0, accountId) {
   return useQuery({
-    queryKey: ['stats', 'daily-trend', days, accountId ?? null],
+    queryKey: ['stats', 'daily-trend', days, offset, accountId ?? null],
     queryFn: () => statsApi.dailyTrend({
       days,
+      offset,
       ...(accountId ? { account_id: accountId } : {}),
     }),
     staleTime: 60_000,
@@ -68,6 +69,18 @@ export function useAnalyticsInsights(params) {
     queryKey: ['stats', 'insights', params],
     queryFn: () => statsApi.insights(params),
     enabled: Boolean(params?.date_from && params?.date_to),
+    staleTime: 60_000,
+  })
+}
+
+export function useBalanceHistory(days = 30, offset = 0, accountId) {
+  return useQuery({
+    queryKey: ['stats', 'balance-history', days, offset, accountId ?? null],
+    queryFn: () => statsApi.balanceHistory({
+      days,
+      offset,
+      ...(accountId ? { account_id: accountId } : {}),
+    }),
     staleTime: 60_000,
   })
 }

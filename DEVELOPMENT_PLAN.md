@@ -87,7 +87,7 @@
 - [ ] 9.2 - Dashboard analytics charts block (compact spending-by-type bar chart — deferred from Phase 7.1)
 - [ ] 9.3 - Edit / soft-delete in “Recent Chronicles” dashboard block (deferred from Phase 7.6)
 - [ ] 9.4 - Add "past instances" to Prophecies (needs design work)
-- [ ] 9.5 - Analytics overhaul
+- [x] 9.5 - Analytics overhaul
 - [x] 9.6 - add an optional line on top of "Thy Lowest Fortunes" block, showing the date when the account will go below zero (if present)
 - [ ] 9.7 - make "Show predictive features on non-primary accounts" setting actualy work (dashboard + analytics with the same logic as in dashboard)
 - [x] 9.8 - Implement PWA support
@@ -2305,8 +2305,6 @@ A few things to start off (consider them to be discussion points rather than ord
 - Balance-over-time analytics chart (see deferred from 6.5). It's not there. It could be.
 
 
-**Mark complete:** `[ ] 9.5 -  Analytics overhaul`
-
 ---
 
 #### Specs
@@ -2329,7 +2327,7 @@ A few things to start off (consider them to be discussion points rather than ord
 
 **Monthly Overview (own toggle, independent of global period)**
 - `MonthlyGroupedBarChart`: side-by-side bars, spending (danger red) vs gains (success green) per month
-- Internal 6mo / 12mo segmented toggle in card header
+- Internal 6mo / 12mo segmented toggle in card header *(deviation: toggle removed — always shows last 12 months; simpler and sufficient)*
 - Replaces text cards + pagination entirely
 
 **Balance Over Time (new)**
@@ -2339,8 +2337,8 @@ A few things to start off (consider them to be discussion points rather than ord
 - Requires new backend endpoint `/stats/balance-history`
 
 **Insights split into two cards**
-- **Achievements**: streaks, records, most expensive purchase, biggest day, most frequent method/category + new `period_net` and `savings_rate` fields
-- **Category Trends** (separate card): category delta percentages as a compact bar/list
+- **Achievements**: streaks, records, most expensive purchase, biggest day, most frequent method/category + new `period_net` and `savings_rate` fields *(deviation: `savings_rate` not implemented — derivable from existing fields if needed later)*
+- **Category Trends** *(deviation: not a separate card — trend arrows merged inline into the Category bar chart rows; percentage + previous-period amount shown on hover)*
 
 ---
 
@@ -2378,11 +2376,13 @@ A few things to start off (consider them to be discussion points rather than ord
    - Add: `periodDays`, `periodOffset`, `activeCompositionTab`, `monthlyRange`
    - Page order: PeriodControl → Composition (tabbed) → Daily Spending → Monthly Overview → Balance History → Achievements → Category Trends
 
-**[ ] Step 1: Backend — balance-history endpoint**
-**[ ] Step 2: Backend — enrich insights with period totals**
-**[ ] Step 3: Frontend — API + hook for balance-history**
-**[ ] Step 4: Frontend — four chart components**
-**[ ] Step 5: Frontend — AnalyticsPage restructure**
+**[x] Step 1: Backend — balance-history endpoint**
+**[x] Step 2: Backend — enrich insights with period totals**
+**[x] Step 3: Frontend — API + hook for balance-history**
+**[x] Step 4: Frontend — four chart components**
+**[x] Step 5: Frontend — AnalyticsPage restructure**
+
+**Mark complete:** `[x] 9.5 - Analytics overhaul`
 
 ---
 

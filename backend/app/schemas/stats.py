@@ -77,11 +77,17 @@ class SpendingByTypeResponse(BaseModel):
     types: list[SpendingTypeRow]
 
 
+class DailyTrendCategoryRow(BaseModel):
+    category_name: str
+    total: Decimal
+
+
 class DailyTrendRow(BaseModel):
     date: date
     spending: Decimal
     rolling_average: Decimal
     status: str  # high / low / normal / zero
+    categories: list[DailyTrendCategoryRow] = []
 
 
 class DailyTrendResponse(BaseModel):
@@ -128,3 +134,18 @@ class AnalyticsInsightsResponse(BaseModel):
     most_frequent_unplanned_category: str | None
     most_frequent_unplanned_category_count: int
     category_trends: list[CategoryTrendRow]
+    period_total_spending: Decimal = Decimal("0")
+    period_total_gains: Decimal = Decimal("0")
+    period_net: Decimal = Decimal("0")
+
+
+class BalanceHistoryPoint(BaseModel):
+    date: date
+    balance: Decimal
+
+
+class BalanceHistoryResponse(BaseModel):
+    account_id: int
+    days: int
+    offset: int
+    points: list[BalanceHistoryPoint]

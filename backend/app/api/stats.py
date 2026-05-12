@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.stats import (
     AnalyticsInsightsResponse,
+    BalanceHistoryResponse,
     CategorySpendingResponse,
     CategorySubcategoryResponse,
     DailyTrendResponse,
@@ -87,10 +88,11 @@ def get_spending_by_type(
 @router.get("/daily-trend", response_model=DailyTrendResponse)
 def get_daily_trend(
     days: int = Query(30, ge=7, le=365),
+    offset: int = Query(0, ge=0, le=52),
     account_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
 ):
-    return stats_service.get_daily_trend(db, days=days, account_id=account_id)
+    return stats_service.get_daily_trend(db, days=days, offset=offset, account_id=account_id)
 
 
 @router.get("/monthly-comparison", response_model=MonthlyComparisonResponse)
@@ -113,5 +115,20 @@ def get_insights(
         db,
         date_from=date_from,
         date_to=date_to,
+        account_id=account_id,
+    )
+
+
+@router.get("/balance-history", response_model=BalanceHistoryResponse)
+def get_balance_history(
+    days: int = Query(30, ge=7, le=365),
+    offset: int = Query(0, ge=0, le=52),
+    account_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    return stats_service.get_balance_history(
+        db,
+        days=days,
+        offset=offset,
         account_id=account_id,
     )
