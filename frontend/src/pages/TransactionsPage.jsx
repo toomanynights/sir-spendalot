@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ChevronDown, ChevronUp, Pencil, ScrollText, Trash2, X } from 'lucide-react'
+import { Pencil, ScrollText, Trash2, X } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { categoriesApi } from '../api/categories'
 import { useCategories } from '../hooks/useCategories'
@@ -14,10 +14,14 @@ import {
 } from '../hooks/useTransactions'
 import { Button } from '../components/ui/Button'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
+import { FilterBar } from '../components/ui/FilterBar'
+import { Pagination } from '../components/ui/Pagination'
+import { AmountDisplay } from '../components/ui/AmountDisplay'
+import { EmptyState } from '../components/ui/Spinner'
 import SubcategorySuggestions from '../components/ui/SubcategorySuggestions'
 import PageContextHeader from '../components/layout/PageContextHeader'
 import { useSelectedAccount } from '../contexts/AccountContext'
-import { formatAmount, formatDate } from '../utils/format'
+import { formatDate } from '../utils/format'
 
 const PAGE_SIZE = 20
 
@@ -49,10 +53,6 @@ function toNumberOrNull(value) {
   if (!value) return null
   const num = Number(value)
   return Number.isFinite(num) ? num : null
-}
-
-function txSignClass(amount) {
-  return Number(amount) < 0 ? 'text-success' : 'text-danger'
 }
 
 function txBorderClass(tx) {
@@ -367,20 +367,13 @@ export default function TransactionsPage() {
       />
 
       <div className="page-container">
-        <Card shimmer className="mb-6">
-          <CardHeader>
-            <button
-              type="button"
-              onClick={() => setFiltersExpanded((v) => !v)}
-              className="flex flex-1 min-w-0 items-center justify-between gap-2 text-left min-h-touch py-1 rounded-md hover:bg-black/10"
-            >
-              <span className="card-title">Filters</span>
-              {filtersExpanded ? <ChevronUp size={18} className="text-gold" /> : <ChevronDown size={18} className="text-gold" />}
-            </button>
-          </CardHeader>
-          {filtersExpanded && (
-            <CardBody>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <FilterBar
+          expanded={filtersExpanded}
+          onToggle={() => setFiltersExpanded((v) => !v)}
+          onReset={clearAllFilters}
+          className="mb-6"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             <label>
               <span className="input-label">From</span>
               <input
@@ -482,25 +475,17 @@ export default function TransactionsPage() {
                 )}
               </>
             )}
-              </div>
-
-              <div className="mt-4 flex items-center justify-between gap-4">
-                <label className="inline-flex items-center gap-2 text-sm text-gold-muted cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-gold"
-                    checked={includeDeleted}
-                    onChange={(e) => setParam('include_deleted', e.target.checked ? 'true' : '')}
-                  />
-                  Show struck chronicles
-                </label>
-                <Button variant="ghost" onClick={clearAllFilters}>
-                  Reset filters
-                </Button>
-              </div>
-            </CardBody>
-          )}
-        </Card>
+            <label className="col-span-full inline-flex items-center gap-2 text-sm text-gold-muted cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-gold"
+                checked={includeDeleted}
+                onChange={(e) => setParam('include_deleted', e.target.checked ? 'true' : '')}
+              />
+              Show struck chronicles
+            </label>
+          </div>
+        </FilterBar>
 
         <Card shimmer>
           <CardHeader title="Chronicles List" />
@@ -516,7 +501,7 @@ export default function TransactionsPage() {
           )}
 
           {!isLoading && !isError && (transactions || []).length === 0 && (
-            <p className="text-gold-muted font-crimson italic">No chronicles match these filters.</p>
+            <EmptyState message="No chronicles match these filters." className="py-6" />
           )}
 
           {!isLoading && !isError && (transactions || []).length > 0 && (
@@ -553,10 +538,7 @@ export default function TransactionsPage() {
                       </div>
 
                       <div className="shrink-0 flex flex-col items-end gap-1.5">
-                        <span className={`text-base font-bold tabular-nums leading-none ${txSignClass(tx.amount)}`}>
-                          {Number(tx.amount) < 0 ? '+' : '-'}
-                          {formatAmount(tx.amount)}
-                        </span>
+                        <AmountDisplay amount={tx.amount} className="text-base font-bold tabular-nums leading-none" />
                         {!tx.deleted_at ? (
                           <div className="flex items-center gap-1">
                             <Button
@@ -565,7 +547,7 @@ export default function TransactionsPage() {
                               onClick={() => setEditingTx(tx)}
                               title="Edit chronicle"
                             >
-                              <Pencil size={14} />
+                              <Pencil size={16} />
                             </Button>
                             <Button
                               variant="ghost"
@@ -574,7 +556,7 @@ export default function TransactionsPage() {
                               disabled={deleteTx.isPending}
                               title="Strike this chronicle"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={16} />
                             </Button>
                           </div>
                         ) : (
@@ -626,8 +608,8 @@ export default function TransactionsPage() {
                             <span className="ml-2 text-xs text-gold-muted">(deleted)</span>
                           )}
                         </td>
-                        <td className={`py-2 pr-3 text-right font-semibold ${txSignClass(tx.amount)}`}>
-                          {Number(tx.amount) < 0 ? '+' : '-'}{formatAmount(tx.amount)}
+                        <td className="py-2 pr-3 text-right">
+                          <AmountDisplay amount={tx.amount} className="font-semibold" />
                         </td>
                         <td className="py-2 text-right">
                           <div className="flex justify-end gap-2">
@@ -673,16 +655,15 @@ export default function TransactionsPage() {
             </>
           )}
 
-          {!isLoading && !isError && (hasPrev || hasNext) && (
-            <div className="mt-5 flex items-center justify-between border-t border-gold/20 pt-4">
-              <Button onClick={() => changePage(page - 1)} disabled={!hasPrev}>
-                Previous
-              </Button>
-              <span className="text-sm text-gold-muted">Page {page}</span>
-              <Button onClick={() => changePage(page + 1)} disabled={!hasNext}>
-                Next
-              </Button>
-            </div>
+          {!isLoading && !isError && (
+            <Pagination
+              hasPrev={hasPrev}
+              hasNext={hasNext}
+              onPrev={() => changePage(page - 1)}
+              onNext={() => changePage(page + 1)}
+              pageNumber={page}
+              className="mt-5 pt-4 border-gold/20"
+            />
           )}
           </CardBody>
         </Card>

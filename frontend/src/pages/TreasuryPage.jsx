@@ -15,6 +15,8 @@ import {
 } from 'lucide-react'
 import PageContextHeader from '../components/layout/PageContextHeader'
 import { Button } from '../components/ui/Button'
+import { AccountTypeBadge } from '../components/ui/AccountTypeBadge'
+import { EmptyState } from '../components/ui/Spinner'
 import BalanceCorrectionModal from '../components/BalanceCorrectionModal'
 import TransferModal from '../components/TransferModal'
 import CheckupModal from '../components/CheckupModal'
@@ -629,7 +631,7 @@ export default function TreasuryPage() {
           </div>
           <div className="card-body">
             {sortedAccounts.length === 0 ? (
-              <p className="text-gold-muted font-crimson text-sm">No accounts yet - create thy first coffer.</p>
+              <EmptyState message="No accounts yet — create thy first coffer." className="py-4" />
             ) : (
               <div className="treasury-scroll-list space-y-3">
                 {sortedAccounts.map((acc) => {
@@ -641,7 +643,7 @@ export default function TreasuryPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           {acc.is_primary ? <Crown size={16} className="text-gold shrink-0" aria-label="Primary" /> : null}
                           <span className="text-parchment font-semibold font-cinzel">{acc.name}</span>
-                          <span className="treasury-row-meta">({acc.account_type})</span>
+                          <AccountTypeBadge type={acc.account_type} />
                         </div>
                         <p className="text-gold mt-1 font-cinzel">Balance {formatSigned(acc.current_balance)}</p>
                         <button
@@ -657,7 +659,7 @@ export default function TreasuryPage() {
                       {/* Right: action buttons */}
                       <div className="treasury-actions">
                         <Button type="button" variant="ghost" className="!px-2" title="Edit" onClick={() => setAccountModal({ mode: 'edit', account: acc })}>
-                          <Pencil size={18} />
+                          <Pencil size={16} />
                         </Button>
                         <Button
                           type="button"
@@ -666,7 +668,7 @@ export default function TreasuryPage() {
                           title="Balance correction"
                           onClick={() => setCorrectionAccount(acc)}
                         >
-                          <Scale size={18} />
+                          <Scale size={16} />
                         </Button>
                         <Button
                           type="button"
@@ -675,14 +677,14 @@ export default function TreasuryPage() {
                           title="Reconcile (checkup)"
                           onClick={() => setCheckupAccount(acc)}
                         >
-                          <ClipboardCheck size={18} />
+                          <ClipboardCheck size={16} />
                         </Button>
                         <Button type="button" variant="ghost" className="!px-2" title="Transfer" onClick={() => setTransferFrom(acc)}>
-                          <ArrowLeftRight size={18} />
+                          <ArrowLeftRight size={16} />
                         </Button>
                         {!acc.is_primary ? (
                           <Button type="button" variant="ghost" className="!px-2 text-danger/80 hover:text-danger" title="Smite" onClick={() => handleDeleteAccount(acc)}>
-                            <Trash2 size={18} />
+                            <Trash2 size={16} />
                           </Button>
                         ) : null}
                       </div>
@@ -755,7 +757,7 @@ export default function TreasuryPage() {
                       </div>
                       {childCats.length > 0 ? (
                         <div className="treasury-subcats">
-                          <button type="button" className="flex items-center gap-1 text-left w-full" onClick={() => toggleCatExpand(cat.id)}>
+                          <button type="button" className="treasury-account-expand" onClick={() => toggleCatExpand(cat.id)}>
                             {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                             <span>Subcategories ({childCats.length})</span>
                           </button>
@@ -815,10 +817,10 @@ export default function TreasuryPage() {
                   </div>
                   <div className="treasury-actions">
                     <Button type="button" variant="ghost" className="!px-2" onClick={() => setPmModal(pm)}>
-                      <Pencil size={18} />
+                      <Pencil size={16} />
                     </Button>
                     <Button type="button" variant="ghost" className="!px-2 text-danger/80" onClick={() => handleDeletePm(pm)}>
-                      <Trash2 size={18} />
+                      <Trash2 size={16} />
                     </Button>
                   </div>
                 </div>

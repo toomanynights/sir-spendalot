@@ -1,10 +1,14 @@
 import { useState } from 'react'
-import { BookOpen, ChevronLeft, ChevronRight, Check } from 'lucide-react'
+import { BookOpen, Check } from 'lucide-react'
 import { useTransactions, useUpdateTransaction } from '../../hooks/useTransactions'
 import { useSelectedAccount } from '../../contexts/AccountContext'
 import { Card, CardHeader, CardBody } from '../ui/Card'
 import { Badge } from '../ui/Badge'
-import { formatAmount, formatRelativeDate } from '../../utils/format'
+import { AmountDisplay } from '../ui/AmountDisplay'
+import { SkeletonRow } from '../ui/SkeletonRow'
+import { Pagination } from '../ui/Pagination'
+import { EmptyState } from '../ui/Spinner'
+import { formatRelativeDate } from '../../utils/format'
 
 const PAGE_SIZE = 5
 
@@ -27,26 +31,6 @@ const TYPE_BADGE_VARIANT = {
 function rowBorderClass(tx) {
   if (tx.type === 'transfer' || tx.type === 'correction') return 'border-l-4 border-gold/60'
   return parseFloat(tx.amount) < 0 ? 'tx-row-income' : 'tx-row-expense'
-}
-
-function AmountDisplay({ amount }) {
-  const num = parseFloat(amount)
-  if (num < 0) {
-    return <span className="font-bold text-sm text-success">+{formatAmount(num)}</span>
-  }
-  return <span className="font-bold text-sm text-danger">−{formatAmount(num)}</span>
-}
-
-function SkeletonRow() {
-  return (
-    <div className="flex items-center justify-between px-3 py-2 rounded-md bg-black/20 animate-pulse">
-      <div className="flex-1 space-y-1.5 pr-4">
-        <div className="h-2.5 bg-gold/10 rounded w-1/3" />
-        <div className="h-2 bg-gold/10 rounded w-1/2" />
-      </div>
-      <div className="h-3 bg-gold/10 rounded w-12" />
-    </div>
-  )
 }
 
 function DateGroupLabel({ dateStr }) {
@@ -147,7 +131,6 @@ export default function RecentChronicles() {
   return (
     <Card shimmer>
       <CardHeader icon={<BookOpen size={20} />} title="Recent Chronicles">
-        {/* Show page number only when navigating past page 1 */}
         {page > 0 && (
           <span className="ml-auto text-xs text-gold-muted/60 font-crimson italic">
             Page {page + 1}
@@ -171,9 +154,11 @@ export default function RecentChronicles() {
         )}
 
         {!isLoading && !error && transactions?.length === 0 && (
-          <p className="text-gold-muted/60 font-crimson italic text-sm text-center py-4">
-            Thy treasury holds no chronicles yet.
-          </p>
+          <EmptyState
+            icon={<BookOpen size={28} />}
+            message="Thy treasury holds no chronicles yet."
+            className="py-4"
+          />
         )}
 
         {!isLoading && !error && groups.length > 0 && (
@@ -191,25 +176,12 @@ export default function RecentChronicles() {
           </div>
         )}
 
-        {/* Pagination */}
-        {(hasPrev || hasNext) && (
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gold/10">
-            <button
-              onClick={() => setPage(p => p - 1)}
-              disabled={!hasPrev}
-              className="flex items-center gap-1 btn btn-ghost text-sm disabled:opacity-30"
-            >
-              <ChevronLeft size={14} /> Previous
-            </button>
-            <button
-              onClick={() => setPage(p => p + 1)}
-              disabled={!hasNext}
-              className="flex items-center gap-1 btn btn-ghost text-sm disabled:opacity-30"
-            >
-              Next <ChevronRight size={14} />
-            </button>
-          </div>
-        )}
+        <Pagination
+          hasPrev={hasPrev}
+          hasNext={hasNext}
+          onPrev={() => setPage(p => p - 1)}
+          onNext={() => setPage(p => p + 1)}
+        />
       </CardBody>
     </Card>
   )

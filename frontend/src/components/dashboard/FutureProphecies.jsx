@@ -1,29 +1,20 @@
 import { useState } from 'react'
-import { Scroll, Check, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Scroll, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { usePredictionInstances, useConfirmInstance, useSkipInstance } from '../../hooks/usePredictions'
 import { usePaymentMethods } from '../../hooks/usePaymentMethods'
 import { useSelectedAccount } from '../../contexts/AccountContext'
 import { Card, CardHeader, CardBody } from '../ui/Card'
 import { Badge } from '../ui/Badge'
 import { Input, Select } from '../ui/Input'
+import { SkeletonRow } from '../ui/SkeletonRow'
+import { Pagination } from '../ui/Pagination'
+import { EmptyState } from '../ui/Spinner'
 import { formatAmount, formatRelativeDate } from '../../utils/format'
 
 const PAGE_SIZE = 5
 
 function todayStr() {
   return new Date().toISOString().split('T')[0]
-}
-
-function SkeletonRow() {
-  return (
-    <div className="flex items-center justify-between px-3 py-2.5 rounded-md bg-black/20 animate-pulse">
-      <div className="flex-1 space-y-1.5 pr-4">
-        <div className="h-2.5 bg-gold/10 rounded w-2/5" />
-        <div className="h-2 bg-gold/10 rounded w-1/3" />
-      </div>
-      <div className="h-3 bg-gold/10 rounded w-16" />
-    </div>
-  )
 }
 
 function ProphecyRow({ instance }) {
@@ -198,9 +189,11 @@ export default function FutureProphecies() {
         )}
 
         {!isLoading && !error && all.length === 0 && (
-          <p className="text-gold-muted/60 font-crimson italic text-sm text-center py-4">
-            Thy future holds no prophesied deeds.
-          </p>
+          <EmptyState
+            icon={<Scroll size={28} />}
+            message="Thy future holds no prophesied deeds."
+            className="py-4"
+          />
         )}
 
         {!isLoading && !error && paginated.length > 0 && (
@@ -211,24 +204,12 @@ export default function FutureProphecies() {
           </div>
         )}
 
-        {(hasPrev || hasNext) && (
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gold/10">
-            <button
-              onClick={() => setPage(p => p - 1)}
-              disabled={!hasPrev}
-              className="flex items-center gap-1 btn btn-ghost text-sm disabled:opacity-30"
-            >
-              <ChevronLeft size={14} /> Previous
-            </button>
-            <button
-              onClick={() => setPage(p => p + 1)}
-              disabled={!hasNext}
-              className="flex items-center gap-1 btn btn-ghost text-sm disabled:opacity-30"
-            >
-              Next <ChevronRight size={14} />
-            </button>
-          </div>
-        )}
+        <Pagination
+          hasPrev={hasPrev}
+          hasNext={hasNext}
+          onPrev={() => setPage(p => p - 1)}
+          onNext={() => setPage(p => p + 1)}
+        />
       </CardBody>
     </Card>
   )

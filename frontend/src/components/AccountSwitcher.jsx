@@ -4,7 +4,7 @@ import { accountsApi } from '../api/accounts'
 import { useSelectedAccount } from '../contexts/AccountContext'
 import { usePredictionInstances } from '../hooks/usePredictions'
 import { useSettings } from '../hooks/useSettings'
-import { Badge } from './ui/Badge'
+import { AccountTypeBadge } from './ui/AccountTypeBadge'
 import { Spinner } from './ui/Spinner'
 
 /**
@@ -138,9 +138,7 @@ export default function AccountSwitcher() {
                 title="Attention needed: pending prophecy or checkup due."
               />
             ) : null}
-            {isSavings && (
-              <Badge variant="muted" className="ml-1 hidden sm:inline-block">Savings</Badge>
-            )}
+            <AccountTypeBadge type={account.account_type} className="ml-1 hidden sm:inline-block" />
           </button>
         )
       })}

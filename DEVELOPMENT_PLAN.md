@@ -70,7 +70,7 @@
 - [x] 7.5 - Default payment method — add to Treasury; make selected by default when submitting via dashboard block / Quick entry (per account)
 - [x] 7.7 - Chronicles improvement
 - [x] 7.8 - Explicit income/expense control in Record Thy Deed, Quick entry (and add default type to categories). 
-- [ ] 7.9 - Components reuse
+- [x] 7.9 - Components reuse
 - [x] 7.10 - Browser notifications for predictions about to go overdue / already overdue (with setting: on/off + time)
 - [x] 7.11 - Per-account checkup vs. actual balance
 - [x] 7.12 - In topbar, add optional attention dot in case account hasn't been checked up within specified period; if it has unconfirmed today/past prophecies
@@ -2010,11 +2010,11 @@ Instead, logic of "negative means gain" should remain on backend. For user, the 
 
 10. **Filter bar** — `TransactionsPage` and `PredictionsPage` have nearly identical expandable card headers (chevron toggle + "Filters" title + reset button). Create a `FilterBar` wrapper component and apply to both.
 
-- [ ] Items 1–10 implemented
+- [x] Items 1–10 implemented (items 4 and 5 skipped per spec — intentional design variation)
 
 After implementation, add to the appropriate location of the agent rules the instruction to prefer reusing components rather than writing new ones / hardcoding.
 
-**Mark complete:** `[ ] 7.9 - Components reuse`
+**Mark complete:** `[x] 7.9 - Components reuse`
 
 ---
 

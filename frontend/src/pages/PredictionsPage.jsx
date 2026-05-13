@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ChevronDown, ChevronUp, Pause, Play, TrendingDown, Trash2, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pause, Pencil, Play, TrendingDown, Trash2, X } from 'lucide-react'
 import {
   useCreatePredictionTemplate,
   useConfirmInstance,
@@ -15,9 +15,12 @@ import { usePaymentMethods } from '../hooks/usePaymentMethods'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
+import { FilterBar } from '../components/ui/FilterBar'
+import { AmountDisplay } from '../components/ui/AmountDisplay'
+import { EmptyState } from '../components/ui/Spinner'
 import PageContextHeader from '../components/layout/PageContextHeader'
 import { useSelectedAccount } from '../contexts/AccountContext'
-import { formatAmount, formatDate } from '../utils/format'
+import { formatDate } from '../utils/format'
 
 const INSTANCE_PREVIEW_LIMIT = 5
 
@@ -338,76 +341,56 @@ export default function PredictionsPage() {
 
       <div className="page-container">
         <div className="flex flex-col gap-8 max-w-3xl w-full">
-          <Card shimmer>
-            <CardHeader>
-              <button
-                type="button"
-                onClick={() => setFiltersExpanded((v) => !v)}
-                className="flex flex-1 min-w-0 items-center justify-between gap-2 text-left min-h-touch py-1 rounded-md hover:bg-black/10"
-              >
-                <span className="card-title">Filters</span>
-                {filtersExpanded ? <ChevronUp size={18} className="text-gold" /> : <ChevronDown size={18} className="text-gold" />}
-              </button>
-            </CardHeader>
-            {filtersExpanded && (
-              <CardBody>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="md:col-span-2">
-                    <span className="input-label">Title contains</span>
-                    <input
-                      className="input"
-                      value={titleFilter}
-                      onChange={(e) => setTitleFilter(e.target.value)}
-                      placeholder="Rent, salary, internet..."
-                    />
-                  </label>
-                  <label>
-                    <span className="input-label">Type</span>
-                    <select className="input" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-                      <option value="">All</option>
-                      <option value="expense">Expense</option>
-                      <option value="income">Gain</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span className="input-label">Frequency</span>
-                    <select className="input" value={frequencyFilter} onChange={(e) => setFrequencyFilter(e.target.value)}>
-                      <option value="">All</option>
-                      {FREQUENCY_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span className="input-label">Status</span>
-                    <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                      <option value="">All</option>
-                      <option value="active">Active</option>
-                      <option value="paused">Paused</option>
-                    </select>
-                  </label>
-                </div>
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <p className="text-xs text-gold-muted font-crimson italic">
-                    Showing {filteredTemplates.length} of {(templates || []).length} templates.
-                  </p>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setTitleFilter('')
-                      setTypeFilter('')
-                      setFrequencyFilter('')
-                      setStatusFilter('')
-                    }}
-                  >
-                    Reset filters
-                  </Button>
-                </div>
-              </CardBody>
-            )}
-          </Card>
+          <FilterBar
+            expanded={filtersExpanded}
+            onToggle={() => setFiltersExpanded((v) => !v)}
+            onReset={() => {
+              setTitleFilter('')
+              setTypeFilter('')
+              setFrequencyFilter('')
+              setStatusFilter('')
+            }}
+            resultText={`Showing ${filteredTemplates.length} of ${(templates || []).length} templates.`}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="md:col-span-2">
+                <span className="input-label">Title contains</span>
+                <input
+                  className="input"
+                  value={titleFilter}
+                  onChange={(e) => setTitleFilter(e.target.value)}
+                  placeholder="Rent, salary, internet..."
+                />
+              </label>
+              <label>
+                <span className="input-label">Type</span>
+                <select className="input" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                  <option value="">All</option>
+                  <option value="expense">Expense</option>
+                  <option value="income">Gain</option>
+                </select>
+              </label>
+              <label>
+                <span className="input-label">Frequency</span>
+                <select className="input" value={frequencyFilter} onChange={(e) => setFrequencyFilter(e.target.value)}>
+                  <option value="">All</option>
+                  {FREQUENCY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="input-label">Status</span>
+                <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="">All</option>
+                  <option value="active">Active</option>
+                  <option value="paused">Paused</option>
+                </select>
+              </label>
+            </div>
+          </FilterBar>
           <Card shimmer>
             <CardHeader title="Prediction Templates">
               <Button
@@ -432,11 +415,11 @@ export default function PredictionsPage() {
               </p>
             )}
             {!isLoading && !isError && (templates || []).length === 0 && (
-              <p className="text-gold-muted font-crimson italic">No prophecy templates yet.</p>
+              <EmptyState message="No prophecy templates yet." className="py-6" />
             )}
 
             {!isLoading && !isError && (templates || []).length > 0 && filteredTemplates.length === 0 && (
-              <p className="text-gold-muted font-crimson italic">No templates match these filters.</p>
+              <EmptyState message="No templates match these filters." className="py-6" />
             )}
 
             {!isLoading && !isError && filteredTemplates.length > 0 && (
@@ -467,9 +450,7 @@ export default function PredictionsPage() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className={`text-base font-semibold ${Number(template.amount) < 0 ? 'text-success' : 'text-danger'}`}>
-                            {Number(template.amount) < 0 ? '+' : '-'}{formatAmount(template.amount)}
-                          </p>
+                          <AmountDisplay amount={template.amount} className="text-base font-semibold" />
                           <p className="text-xs text-gold-muted mt-1">
                             Next: {nextScheduled ? formatDate(nextScheduled) : '—'}
                           </p>
@@ -491,7 +472,7 @@ export default function PredictionsPage() {
                             variant="ghost"
                             onClick={() => handlePauseResume(template)}
                             disabled={pauseTemplate.isPending || resumeTemplate.isPending}
-                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border border-gold/20 bg-black/20 text-xs leading-none ${
+                            className={`inline-flex items-center gap-1 px-2 py-1 text-xs leading-none ${
                               template.paused ? 'text-success' : 'text-gold'
                             }`}
                           >
@@ -500,19 +481,20 @@ export default function PredictionsPage() {
                           </Button>
                           <Button
                             variant="ghost"
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-gold/20 bg-black/20 text-gold text-xs leading-none"
+                            className="inline-flex items-center gap-1 px-2 py-1 text-gold text-xs leading-none"
                             onClick={() => setEditingTemplate(template)}
                           >
-                            Edit
+                            <Pencil size={14} />
+                            <span>Edit</span>
                           </Button>
                           <Button
                             variant="ghost"
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-danger/40 bg-black/20 text-danger text-xs leading-none"
+                            className="inline-flex items-center gap-1 px-2 py-1 text-danger text-xs leading-none"
                             onClick={() => handleDelete(template)}
                             disabled={deleteTemplate.isPending}
                           >
                             <Trash2 size={14} />
-                            <span>Delete</span>
+                            <span>Smite</span>
                           </Button>
                         </div>
                       </div>
@@ -531,9 +513,7 @@ export default function PredictionsPage() {
                             >
                               <div>
                                 <p className="text-sm">{formatDate(instance.scheduled_date)}</p>
-                                <p className={`text-xs ${Number(instance.amount) < 0 ? 'text-success' : 'text-danger'}`}>
-                                  {Number(instance.amount) < 0 ? '+' : '-'}{formatAmount(instance.amount)}
-                                </p>
+                                <AmountDisplay amount={instance.amount} className="text-xs" />
                               </div>
                               <div className="flex items-center gap-2">
                                 <Button

@@ -3,7 +3,7 @@ import { useForecast, useLowestPoints } from '../../hooks/usePredictions'
 import { useSettings } from '../../hooks/useSettings'
 import { useSelectedAccount } from '../../contexts/AccountContext'
 import { Card, CardHeader, CardBody } from '../ui/Card'
-import { LoadingScreen } from '../ui/Spinner'
+import { LoadingScreen, EmptyState } from '../ui/Spinner'
 import { formatSigned, formatRelativeDate } from '../../utils/format'
 
 export default function LowestFortune() {
@@ -73,9 +73,11 @@ export default function LowestFortune() {
         ) : null}
 
         {points.length === 0 ? (
-          <p className="text-gold-muted/50 text-sm font-crimson italic py-4 text-center">
-            No perils detected in the coming {horizonDays} days.
-          </p>
+          <EmptyState
+            icon={<TrendingDown size={28} />}
+            message={`No perils detected in the coming ${horizonDays} days.`}
+            className="py-4"
+          />
         ) : (
           <div className="space-y-4">
             {points.map((point, idx) => (

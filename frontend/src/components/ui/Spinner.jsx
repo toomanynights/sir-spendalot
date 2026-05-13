@@ -41,9 +41,9 @@ export function LoadingScreen({ message = 'Loading…' }) {
   )
 }
 
-export function EmptyState({ icon, title, message, children, className = '' }) {
+export function EmptyState({ icon, title, message, children, className = 'py-8 px-6' }) {
   return (
-    <div className={['text-center py-12 px-6', className].filter(Boolean).join(' ')}>
+    <div className={['text-center', className].filter(Boolean).join(' ')}>
       {icon && (
         <div className="flex justify-center mb-4 text-gold/40">
           {icon}
