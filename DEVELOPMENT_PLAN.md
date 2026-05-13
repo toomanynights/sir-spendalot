@@ -124,7 +124,7 @@
 - [x] 11.5 - Prophecies page
 - [x] 11.6 - Analytics page
 - [x] 11.7 - Treasury page
-- [ ] 11.8 - Settings page
+- [x] 11.8 - Settings page
 
 ---
 
