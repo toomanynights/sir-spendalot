@@ -90,6 +90,14 @@
   padding-right: 0.25rem;
 }
 
+@media (max-width: 1023px) {
+  .treasury-scroll-list {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+}
+
 .treasury-scroll-list::-webkit-scrollbar {
   width: 8px;
 }
